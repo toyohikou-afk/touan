@@ -4,7 +4,10 @@ export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
     
-    const response = await fetch('http://127.0.0.1:11434/api/generate', {
+    const ollamaUrl = process.env.OLLAMA_URL || process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://127.0.0.1:11434';
+    console.log("Using Ollama URL:", ollamaUrl); // VercelのログにURLが出力されます
+    
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -13,6 +16,10 @@ export async function POST(req: Request) {
         stream: false
       }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
 
     const data = await response.json();
     let text = data.response.trim();
@@ -27,6 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ _warning: "JSON解析失敗", raw_text: text });
     }
   } catch (error) {
+    console.error("API Route Error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
