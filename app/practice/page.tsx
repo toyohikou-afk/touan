@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -71,7 +71,6 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        // 再起案セッションチェック
         let targetProblemId = 'a1111111-1111-1111-1111-111111111111';
         if (typeof window !== 'undefined') {
           const retryId = sessionStorage.getItem('retry_problem_id');
@@ -82,7 +81,6 @@ export default function PracticePage() {
           sessionStorage.removeItem('retry_draft');
         }
 
-        // 問題取得
         const { data: probData } = await supabase
           .from('sub_problems')
           .select('*')
@@ -94,7 +92,6 @@ export default function PracticePage() {
           setTimeLeft((probData.suggested_time_minutes || 70) * 60);
         }
 
-        // アナトミー取得
         const { data: anatData } = await supabase
           .from('model_answer_anatomies')
           .select('*')
@@ -173,7 +170,6 @@ export default function PracticePage() {
       const aiComment = resJson.feedback || '採点が完了しました。';
       setFeedback(aiComment);
 
-      // Supabaseに履歴保存
       await supabase.from('submissions').insert({
         problem_id: problem?.id,
         user_draft: draft,
@@ -192,13 +188,13 @@ export default function PracticePage() {
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const charCount = draft.length;
-  const maxChars = 2760; // 司法試験・予備試験 4枚相当
+  const maxChars = 2760;
   const progressRatio = Math.min(100, Math.round((charCount / maxChars) * 100));
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
       
-      {/* 1. 最上部ヘッダー（清潔な白基調・高コントラスト） */}
+      {/* 1. 最上部ヘッダー（白基調・高コントラスト） */}
       <header
         style={{
           position: 'sticky',
@@ -215,7 +211,6 @@ export default function PracticePage() {
           gap: '12px',
         }}
       >
-        {/* 左側：問題タイトル */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '20px' }}>⚖️</span>
           <div>
@@ -233,9 +228,8 @@ export default function PracticePage() {
           </div>
         </div>
 
-        {/* 中央：CBTタイマー & 文字数メーター */}
+        {/* 中央：タイマー & 文字数メーター */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {/* タイマー */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
             <span style={{ fontSize: '16px' }}>⏱</span>
             <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold', color: timeLeft <= 600 ? '#dc2626' : '#0f172a' }}>
@@ -259,7 +253,6 @@ export default function PracticePage() {
             </button>
           </div>
 
-          {/* 文字数カウンター */}
           <div style={{ minWidth: '150px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', marginBottom: '3px', color: '#475569' }}>
               <span>文字数: <strong style={{ color: charCount > maxChars ? '#dc2626' : '#0284c7' }}>{charCount}</strong> / {maxChars} 字</span>
@@ -278,10 +271,8 @@ export default function PracticePage() {
           </div>
         </div>
 
-        {/* 右側：文字サイズ変更 & ダッシュボード移動 & 提出 */}
+        {/* 右側：文字サイズ変更 & ナビゲーション */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          
-          {/* 文字サイズ切り替え */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 6px', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', marginRight: '2px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => {
@@ -345,13 +336,11 @@ export default function PracticePage() {
         </div>
       </header>
 
-      {/* 2. メイン 2ペイン分割（左：問題文・条文 / 右：起案エディタ） */}
+      {/* 2. メイン 2ペイン分割 */}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(380px, 45%) minmax(420px, 55%)', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
         
         {/* 左ペイン：問題文 / 電子六法 */}
         <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          
-          {/* タブ切り替え */}
           <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px' }}>
             <button
               type="button"
@@ -387,15 +376,14 @@ export default function PracticePage() {
             </button>
           </div>
 
-          {/* コンテンツ本文 */}
           <div style={{ flex: 1, padding: '20px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
             {activeTab === 'problem' ? (
               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
                 {problem?.fact_context || '問題文を読み込み中...'}
               </div>
             ) : (
-              <div style={{ spaceY: '16px', color: '#1e293b' }}>
-                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: '#1e293b' }}>
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px' }}>
                   <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 'bold', color: '#0369a1' }}>
                     民法 第94条（虚偽表示）
                   </h4>
@@ -420,8 +408,6 @@ export default function PracticePage() {
 
         {/* 右ペイン：答案エディタ */}
         <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          
-          {/* エディタツールバー */}
           <div style={{ padding: '8px 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e293b' }}>📝 答案エディタ</span>
@@ -465,7 +451,6 @@ export default function PracticePage() {
             </div>
           </div>
 
-          {/* 検索・置換バー（展開時） */}
           {showSearch && (
             <div style={{ padding: '8px 16px', backgroundColor: '#e0f2fe', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
               <input
@@ -493,7 +478,6 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* 起案テキストエリア */}
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -516,10 +500,8 @@ export default function PracticePage() {
         </section>
       </div>
 
-      {/* 3. 画面下部：AI講評 ＆ 合格アシスト（トグル展開） */}
+      {/* 3. 画面下部：AI講評 ＆ 合格アシスト */}
       <div style={{ borderTop: '2px solid #cbd5e1', backgroundColor: '#ffffff', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)' }}>
-        
-        {/* バーヘッダー */}
         <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderBottom: showAssist ? '1px solid #e2e8f0' : 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
@@ -584,11 +566,8 @@ export default function PracticePage() {
           )}
         </div>
 
-        {/* アシストパネル本文 */}
         {showAssist && (
           <div style={{ padding: '20px', maxHeight: '340px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
-            
-            {/* 1. 思考手順 */}
             {assistTab === 'steps' && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
                 {(anatomy?.thinking_steps || []).map((st) => (
@@ -607,7 +586,6 @@ export default function PracticePage() {
               </div>
             )}
 
-            {/* 2. あてはめ設計図 */}
             {assistTab === 'blueprint' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>
@@ -626,7 +604,6 @@ export default function PracticePage() {
               </div>
             )}
 
-            {/* 3. 4色アナトミー */}
             {assistTab === 'anatomy' && (
               <div>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', fontSize: '11px', fontWeight: 'bold' }}>
@@ -677,7 +654,6 @@ export default function PracticePage() {
               </div>
             )}
 
-            {/* 4. 模範答案・三段論法 */}
             {assistTab === 'syllogism' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px' }}>
@@ -713,11 +689,9 @@ export default function PracticePage() {
                 </div>
               </div>
             )}
-
           </div>
         )}
 
-        {/* AI添削結果の表示欄（フィードバックがある場合） */}
         {feedback && (
           <div style={{ padding: '16px 20px', backgroundColor: '#fffbeb', borderTop: '2px solid #fde68a' }}>
             <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 'bold', color: '#78350f' }}>
@@ -728,7 +702,6 @@ export default function PracticePage() {
             </div>
           </div>
         )}
-
       </div>
 
     </div>
