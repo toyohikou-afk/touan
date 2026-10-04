@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -16,28 +16,34 @@ type SubmissionItem = {
   problem_issue?: string;
 };
 
+type FontSizeLevel = 'sm' | 'base' | 'lg' | 'xl';
+
+const fontSizes: Record<FontSizeLevel, { size: string; lineHeight: string; label: string }> = {
+  sm: { size: '13px', lineHeight: '1.6', label: '小 (13px)' },
+  base: { size: '15px', lineHeight: '1.7', label: '標準 (15px)' },
+  lg: { size: '18px', lineHeight: '1.8', label: '大 (18px)' },
+  xl: { size: '21px', lineHeight: '1.9', label: '特大 (21px)' },
+};
+
 export default function DashboardPage() {
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
 
   useEffect(() => {
-    let isMounted = true;
-
     async function loadData() {
       try {
-        setLoading(true);
-
-        // 1. submissions を取得
-        const { data: subsData, error: subsError } = await supabase
+        const { data: subsData, error } = await supabase
           .from('submissions')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (subsError) {
-          console.warn('Submissions取得エラー:', subsError);
+        if (error) {
+          console.warn('submissions fetch error:', error);
+          setSubmissions([]);
+          return;
         }
 
-        // 2. 関連する問題情報（sub_problems）を安全に個別マッピング
         const items = subsData || [];
         if (items.length > 0) {
           const { data: probData } = await supabase
@@ -49,32 +55,27 @@ export default function DashboardPage() {
             probData.forEach((p) => probMap.set(p.id, p));
           }
 
-          const combined: SubmissionItem[] = items.map((sub: any) => {
+          const combined = items.map((sub: any) => {
             const prob = probMap.get(sub.problem_id);
             return {
               ...sub,
               problem_subject: prob?.subject || '民法',
-              problem_title: prob?.source_exam || '予備試験 演習問題',
-              problem_issue: prob?.target_issue || '94条2項類推適用と第三者',
+              problem_title: prob?.source_exam || '本番演習',
+              problem_issue: prob?.target_issue || '94条2項類推適用',
             };
           });
-
-          if (isMounted) setSubmissions(combined);
+          setSubmissions(combined);
         } else {
-          if (isMounted) setSubmissions([]);
+          setSubmissions([]);
         }
-      } catch (err) {
-        console.error('ダッシュボード読み込みエラー:', err);
+      } catch (e) {
+        console.error('Fetch exception:', e);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     }
 
     loadData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleRetry = (item: SubmissionItem) => {
@@ -86,137 +87,308 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans select-text">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', fontFamily: 'sans-serif' }}>
       
-      {/* ヘッダーバー */}
-      <header className="h-14 bg-[#1e293b] text-white px-6 flex items-center justify-between border-b-2 border-cyan-500 shadow-md">
-        <div className="flex items-center gap-3">
-          <span className="text-xl">🕒</span>
+      {/* 白基調・高コントラストヘッダー */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          backgroundColor: '#ffffff',
+          borderBottom: '3px solid #0284c7',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          padding: '10px 20px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '22px' }}>🕒</span>
           <div>
-            <h1 className="text-sm font-black tracking-wider text-cyan-300">
+            <h1 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
               起案履歴・復習ダッシュボード
             </h1>
-            <p className="text-[11px] text-slate-300">
-              過去の提出答案・所要時間・AI添削講評を閲覧し、再起案できます
+            <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+              過去の答案・所要時間・AI添削講評の確認と再起案
             </p>
           </div>
         </div>
 
-        <Link
-          href="/practice"
-          className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs rounded shadow-md transition"
-        >
-          ← CBT起案画面に戻る
-        </Link>
+        {/* コントロールエリア（文字サイズボタン & 戻るボタン） */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          
+          {/* 文字サイズ切り替えパネル */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f8fafc',
+              border: '2px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '4px 8px',
+              gap: '6px',
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginRight: '4px' }}>
+              🔍 文字サイズ:
+            </span>
+            {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => {
+              const isActive = fontSize === level;
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setFontSize(level)}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    border: isActive ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                    backgroundColor: isActive ? '#0284c7' : '#ffffff',
+                    color: isActive ? '#ffffff' : '#334155',
+                    cursor: 'pointer',
+                    boxShadow: isActive ? '0 1px 3px rgba(2,132,199,0.3)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {level === 'sm' ? '小' : level === 'base' ? '標準' : level === 'lg' ? '大' : '特大'}
+                </button>
+              );
+            })}
+          </div>
+
+          <Link
+            href="/practice"
+            style={{
+              display: 'inline-block',
+              padding: '8px 14px',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '12px',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              boxShadow: '0 2px 4px rgba(2,132,199,0.2)',
+            }}
+          >
+            ← CBT起案画面に戻る
+          </Link>
+        </div>
       </header>
 
       {/* メインコンテンツ */}
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
+      <main style={{ maxWidth: '1100px', margin: '24px auto', padding: '0 16px' }}>
         
         {loading ? (
-          <div className="py-24 text-center text-slate-600 space-y-3">
-            <div className="w-8 h-8 border-3 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-bold">起案履歴を読み込み中...</p>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569' }}>
+            <p style={{ fontWeight: 'bold', fontSize: '14px' }}>起案履歴を確認中...</p>
           </div>
         ) : submissions.length === 0 ? (
-          <div className="bg-white rounded-xl border-2 border-slate-300 p-12 text-center shadow-sm space-y-4">
-            <div className="w-16 h-16 bg-slate-100 text-slate-400 text-3xl rounded-full flex items-center justify-center mx-auto">
-              📭
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-base font-black text-slate-800">
-                保存された起案履歴がまだありません
-              </h2>
-              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                先ほどのデータベース再構築により履歴が初期化されています。起案画面で答案を提出すると、ここに日時・所要時間・AI採点講評が自動で蓄積されます。
-              </p>
-            </div>
-
-            <div className="pt-2">
-              <Link
-                href="/practice"
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs rounded-lg shadow-md transition"
-              >
-                <span>✍️ 最初の問題を起案してみる</span>
-                <span>➔</span>
-              </Link>
-            </div>
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              border: '2px solid #cbd5e1',
+              borderRadius: '12px',
+              padding: '48px 24px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '36px', marginBottom: '12px' }}>📭</div>
+            <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', marginBottom: '8px' }}>
+              保存された起案履歴はありません
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748b', maxWidth: '460px', margin: '0 auto 20px', lineHeight: '1.6' }}>
+              起案画面（/practice）で答案を提出すると、ここに日時・所要時間・AI添削講評が自動で蓄積されます。
+            </p>
+            <Link
+              href="/practice"
+              style={{
+                display: 'inline-block',
+                padding: '10px 20px',
+                backgroundColor: '#047857',
+                color: '#ffffff',
+                fontWeight: 'bold',
+                fontSize: '13px',
+                borderRadius: '6px',
+                textDecoration: 'none',
+              }}
+            >
+              ✍️ CBT起案画面を開く
+            </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-bold px-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#475569', fontWeight: 'bold', padding: '0 4px' }}>
               <span>全 {submissions.length} 件の起案履歴</span>
-              <span>最新順</span>
+              <span>現在の文字サイズ: <strong style={{ color: '#0284c7' }}>{fontSizes[fontSize].label}</strong></span>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-              {submissions.map((sub) => (
+            {submissions.map((sub) => (
+              <div
+                key={sub.id}
+                style={{
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                }}
+              >
+                {/* メタ情報バー */}
                 <div
-                  key={sub.id}
-                  className="bg-white rounded-xl border-2 border-slate-300 hover:border-cyan-600 p-5 shadow-sm space-y-4 transition"
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid #e2e8f0',
+                    paddingBottom: '12px',
+                    marginBottom: '16px',
+                    fontSize: '12px',
+                    gap: '8px',
+                  }}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 bg-cyan-100 text-cyan-950 border border-cyan-300 rounded font-black text-[11px]">
-                        {sub.problem_subject}
-                      </span>
-                      <span className="font-extrabold text-slate-900 text-sm">
-                        {sub.problem_title}
-                      </span>
-                      <span className="text-slate-600">
-                        論点: <strong className="text-slate-900">{sub.problem_issue}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-slate-600 font-mono text-[11px]">
-                      <span>⏱ 所要時間: {Math.floor((sub.time_spent_seconds || 0) / 60)}分{(sub.time_spent_seconds || 0) % 60}秒</span>
-                      <span>📅 {new Date(sub.created_at).toLocaleString('ja-JP')}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-4 text-xs font-serif">
-                    {/* あなたの起案答案 */}
-                    <div className="col-span-6 bg-slate-50 p-4 rounded-lg border border-slate-300 space-y-2">
-                      <div className="flex items-center justify-between font-sans border-b pb-1.5">
-                        <span className="font-black text-slate-800 text-xs flex items-center gap-1.5">
-                          <span>📝</span>
-                          <span>あなたの起案答案</span>
-                        </span>
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          {sub.user_draft?.length || 0} 字
-                        </span>
-                      </div>
-                      <p className="text-slate-800 whitespace-pre-wrap max-h-44 overflow-y-auto leading-relaxed select-text">
-                        {sub.user_draft}
-                      </p>
-                    </div>
-
-                    {/* AI添削講評 */}
-                    <div className="col-span-6 bg-amber-50/60 p-4 rounded-lg border border-amber-300 space-y-2">
-                      <div className="flex items-center justify-between font-sans border-b border-amber-200 pb-1.5">
-                        <span className="font-black text-amber-950 text-xs flex items-center gap-1.5">
-                          <span>⚖</span>
-                          <span>AI添削・採点講評</span>
-                        </span>
-                      </div>
-                      <p className="text-slate-800 whitespace-pre-wrap max-h-44 overflow-y-auto leading-relaxed select-text">
-                        {sub.ai_feedback || '講評なし'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-                    <Link
-                      href="/practice"
-                      onClick={() => handleRetry(sub)}
-                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-md shadow-xs transition"
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        backgroundColor: '#e0f2fe',
+                        color: '#0369a1',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                        fontSize: '11px',
+                      }}
                     >
-                      🔄 この答案を読み込んで再起案する
-                    </Link>
+                      {sub.problem_subject}
+                    </span>
+                    <span style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>
+                      {sub.problem_title}
+                    </span>
+                    <span style={{ color: '#475569' }}>
+                      論点: <strong style={{ color: '#0f172a' }}>{sub.problem_issue}</strong>
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>
+                    <span>⏱ {Math.floor((sub.time_spent_seconds || 0) / 60)}分{(sub.time_spent_seconds || 0) % 60}秒</span>
+                    <span>📅 {new Date(sub.created_at).toLocaleString('ja-JP')}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* 2カラム表示（答案 vs AI講評） */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
+                  {/* 起案答案 */}
+                  <div
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '14px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderBottom: '1px solid #cbd5e1',
+                        paddingBottom: '8px',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '13px' }}>
+                        📝 起案答案
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
+                        {sub.user_draft?.length || 0} 字
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'serif',
+                        color: '#0f172a',
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: '380px',
+                        overflowY: 'auto',
+                        fontSize: fontSizes[fontSize].size,
+                        lineHeight: fontSizes[fontSize].lineHeight,
+                      }}
+                    >
+                      {sub.user_draft}
+                    </div>
+                  </div>
+
+                  {/* AI講評 */}
+                  <div
+                    style={{
+                      backgroundColor: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: '8px',
+                      padding: '14px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderBottom: '1px solid #fde68a',
+                        paddingBottom: '8px',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '13px' }}>
+                        ⚖️ AI添削・採点講評
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'sans-serif',
+                        color: '#1e293b',
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: '380px',
+                        overflowY: 'auto',
+                        fontSize: fontSizes[fontSize].size,
+                        lineHeight: fontSizes[fontSize].lineHeight,
+                      }}
+                    >
+                      {sub.ai_feedback || '講評なし'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 再起案ボタン */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                  <Link
+                    href="/practice"
+                    onClick={() => handleRetry(sub)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#f59e0b',
+                      color: '#0f172a',
+                      fontWeight: 'bold',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    🔄 この答案を読み込んで再起案する
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
