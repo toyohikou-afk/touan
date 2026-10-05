@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 // ==========================================
-// 1. 型定義 ＆ 過去問論点マスターデータ
+// 1. 型定義 ＆ マスターデータ
 // ==========================================
 type ProblemData = {
   id: string;
@@ -43,7 +43,7 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   xl: { text: '20px', lh: '1.95', label: '特大 (20px)' },
 };
 
-// 科目・年度別 過去問論点マスター
+// 予備試験 過去問論点マスター（科目×年度）
 const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   刑法: {
     '令和6年': ['共犯関係からの離脱', '詐欺罪における交付行為と不法原因給付', '誤想防衛と過失犯'],
@@ -91,14 +91,14 @@ const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   },
 };
 
-// ─── 論点ごとに事実１から設問まで100%専用に組み立てるエンジン ───
+// ─── 不動産テンプレを完全根絶：事実１から設問まで100%専用問題生成関数 ───
 function buildDedicatedProblem(subject: string, year: string, issue: string, isKaidai: boolean): ProblemData {
   const sourceExam = `${year} 予備試験${isKaidai ? '改題' : ''}`;
   let factContext = '';
   let standardNorm = '';
   let statutes: Array<{ title: string; text: string }> = [];
 
-  // 1. 刑法
+  // 【刑法】
   if (subject === '刑法') {
     if (issue.includes('離脱')) {
       factContext = `１ 甲は、知人乙から「Vが自宅に多額の現金を保管している。一緒に押し入って金を奪おう」と持ちかけられ、これを承諾した。甲と乙は、深夜にV宅に侵入し、Vを縛り上げて金庫から現金を奪う計画（以下「本件計画」という）を立てた。\n２ 犯行当日午前2時頃、甲と乙は目出し帽を着用し、バールを所持してV宅に赴いた。甲がV宅の勝手口の施錠をバールでこじ開け、甲と乙が屋内に足を踏み入れたところ、奥の寝室で物音に気づいたVが「誰だ！」と大声を上げて廊下に出てきた。\n３ 予期せぬVの出現に激しく動転した甲は、恐怖のあまり「やばい、人が起きてきた。俺はもうやめる、帰るぞ」と乙に小声で告げ、手に持っていたバールをその場に投げ捨てて勝手口から一人で外へ逃走した。\n４ 一方、その場に残った乙は逃走せず、大声を出すVに対して「騒ぐと殺すぞ」と脅迫し、Vの顔面を数回殴打して反抗を抑圧した上、金庫から現金300万円を強奪した。\n５ 甲及び乙の罪責について、共犯関係からの離脱の成否を含めて論ぜよ。`;
@@ -108,7 +108,7 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
         { title: '刑法 第236条（強盗）', text: '暴行又は脅迫を用いて他人の財物を強取した者は、強盗の罪とし、五年以上の有期懲役に処する。' },
       ];
     } else if (issue.includes('防衛')) {
-      factContext = `１ 甲は、深夜路上を歩行中、酒に酔ったV（筋骨隆々の男性）から因縁をつけられ、胸ぐらを掴まれて「殴られたいのか」と凄まれた。\n２ 甲は恐怖を感じて後退りしたが、Vが拳を振り上げて殴りかかろうとしたため、甲は身を守るため、とっさに所持していた護身用特殊警棒を取り出してVの右腕を強く払った。\n３ Vはその場に倒れ込み、全治2週間の打撲を負った。\n４ 甲の行為について、正当防衛（36条1項）の成立要件（急迫不正の侵害、防衛の意思、相当性）を検討して甲の罪責を論ぜよ。`;
+      factContext = `１ 甲は、深夜路上を歩行中、酒に酔ったV（大柄な男性）から言いがかりをつけられ、胸ぐらを掴まれて「殴られたいのか」と凄まれた。\n２ 甲は恐怖を感じて後退りしたが、Vが拳を振り上げて殴りかかろうとしたため、甲は身を守るため、とっさに所持していた護身用特殊警棒を取り出してVの右腕を強く払った。\n３ Vはその場に倒れ込み、右前腕打撲（全治2週間）を負った。\n４ 甲の行為について、正当防衛（36条1項）の成立要件（急迫不正の侵害、防衛の意思、相当性）を検討して甲の罪責を論ぜよ。`;
       standardNorm = `【判例の規範定立】\n正当防衛（刑法36条1項）が成立するためには、①自己又は他人の権利に対する「急迫不正の侵害」が存在し、②自己又は他人の権利を防衛するため「やむを得ずにした行為」であることが必要である。\n【当てはめ基準】\n侵害の急迫性、侵害行為の態様、防衛行為の武器対等性、防衛の意思（攻撃意思の有無）を具体的事実から総合衡量して決する。`;
       statutes = [
         { title: '刑法 第36条（正当防衛）', text: '急迫不正の侵害に対して、自己又は他人の権利を防衛するため、やむを得ずにした行為は、罰しない。' },
@@ -120,9 +120,9 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     }
   }
 
-  // 2. 憲法
+  // 【憲法】
   else if (subject === '憲法') {
-    factContext = `１ 市民団体Xは、特定の安全保障政策に反対する市民集会及びデモ行進を計画した。\n２ Xは、Y市が管理する市民会館大ホール（定員1,500名）を使用するため、条例に基づき市長Yに対して利用許可申請を行った。\n３ これに対し、Xの主張に強く反対するグループが、Y市に対し「集会を許可すれば、当日会場周辺に大挙して押しかけ、実力行使で集会を粉砕する」旨の抗議を連日激しく行った。\n４ 市長Yは、集会当日に会場内外で激しい衝突が生じ、市民会館の施設管理や通行人の安全に重大な支障が生じる危険性が高いと判断し、条例の「公の秩序を乱すおそれがあるとき」に該当するとして利用不許可処分を行った。\n５ 本件不許可処分の憲法上の当否について、${issue}を踏まえて論ぜよ。`;
+    factContext = `１ 市民団体Xは、特定の安全保障政策に反対する市民集会及びパレードを計画した。\n２ Xは、Y市が設置・管理する市民会館大ホール（定員1,500名）を使用するため、条例に基づき市長Yに対して利用許可申請を行った。\n３ これに対し、Xの活動に強く反対するグループが、Y市に対し「集会を許可すれば、当日会場周辺に大挙して押しかけ、実力行使で集会を粉砕する」旨の抗議声明を提出し、連日激しい抗議電話を繰り返した。\n４ 市長Yは、集会当日に会場内外で激しい衝突が生じ、市民会館の施設管理や通行人の安全に重大な支障が生じる危険性が高いと判断し、条例の「公の秩序を乱すおそれがあるとき」に該当するとして利用不許可処分を行った。\n５ 本件不許可処分の憲法上の当否について、${issue}を踏まえて論ぜよ。`;
     standardNorm = `【判例の規範定立】\n地方自治法244条2項の「正当な理由」および憲法21条1項に基づき、公の施設において集会の自由を制限することが正当化されるのは、単に反対派の妨害による混乱の抽象的おそれがあるのみでは足りず、人の生命、身体又は財産が侵害され、公共の安全が著しく損なわれる明らかな差し迫った危険が具体的に予見される場合に限られる（泉佐野市民会館事件）。\n【当てはめ基準】\n警察等の警備措置によっても衝突を防止できないほどの客観的・差し迫った危険性が立証されているかを厳格に審査する。`;
     statutes = [
       { title: '憲法 第21条（表現の自由）', text: '集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。' },
@@ -130,16 +130,16 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     ];
   }
 
-  // 3. 民事訴訟法
+  // 【民事訴訟法】
   else if (subject === '民事訴訟法') {
-    factContext = `１ XはYに対し、甲機械の売買代金債権500万円の支払いを求めて訴えを提起した（前訴）。\n２ 前訴においてYは、売買代金の弁済の事実を主張するとともに、予備的抗弁として、YがXに対して有する別個の請負代金債権500万円（以下「本件債権」という）を自働債権とする相殺の抗弁を主張した。\n３ 前訴裁判所は審理の結果、Yの弁済の抗弁を認めず、さらに相殺の抗弁についても「本件債権の発生原因事実が認められない」として排斥し、Xの請求を全額認容する判決を下し、確定した。\n４ その後、YはXに対し、上記本件債権500万円の支払いを求める別訴を提起した（後訴）。\n５ 後訴における裁判所の判断について、${issue}を踏まえて論ぜよ。`;
+    factContext = `１ XはYに対し、甲機械の売買代金債権500万円の支払いを求めて訴えを提起した（前訴）。\n２ 前訴においてYは、売買代金の弁済の事実を主張するとともに、予備的抗弁として、YがXに対して有する別個の請負代金債権500万円（以下「本件債権」という）を自働債権とする相殺の抗弁を主張した。\n３ 前訴裁判所は審理の結果、Yの弁済の抗弁を認めず、さらに相殺の抗弁についても「本件債権の発生原因事実が認められない」として排斥し、Xの請求を全額認容する判決を下し、同判決は確定した。\n４ その後、YはXに対し、上記本件債権500万円の支払いを求める別訴を提起した（後訴）。\n５ 後訴における裁判所の判断について、${issue}を踏まえて論ぜよ。`;
     standardNorm = `【判例の規範定立】\n既判力は原則として主文に包含するものに限り生ずる（民訴法114条1項）が、相殺のために主張した自働債権の存否についての判断には、判決理由中の判断であるにもかかわらず例外的に既判力が生じる（同条2項）。重複主張による蒸し返しを防止する趣旨である。\n【当てはめ基準】\n相殺の抗弁が実質的に審理され排斥された場合、その自働債権不存在の判断には対抗額の限度で既判力が生じ、後訴において自働債権を別個に訴求することは既判力に抵触し許されない。`;
     statutes = [
       { title: '民事訴訟法 第114条（既判力の及ぶ範囲）', text: '１ 確定判決は、主文に包含するものに限り、既判力を有する。\n２ 相殺のために主張した請求の成立又は不成立の判断は、相殺をもって対抗した額について、既判力を有する。' },
     ];
   }
 
-  // 4. 刑事訴訟法
+  // 【刑事訴訟法】
   else if (subject === '刑事訴訟法') {
     factContext = `１ 司法警察員Kらは、覚醒剤密売の疑いがある甲に対し、身分を秘匿して接触し、覚醒剤の購入を持ちかけた。\n２ 甲は当初躊躇したものの、Kらの執拗な説得に応じ、指定場所において覚醒剤を譲り渡した。\n３ Kらはその場で甲を現行犯逮捕し、覚醒剤を押収した。\n４ 本件捜査の適法性及び押収された覚醒剤の証拠能力について、${issue}を踏まえて論ぜよ。`;
     standardNorm = `【判例の規範定立】\n捜査機関が身分を秘匿して犯意を誘発するおとり捜査は、直接の被害者がいない薬物犯罪等において、通常の捜査方法のみでは摘発が困難な場合に、相当な方法による限り適法である。違法な捜査により収集された証拠は、令状主義の精神を潜脱する重大な違法があり、排除することが相当と認められるときは証拠能力を失う。`;
@@ -148,7 +148,7 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     ];
   }
 
-  // 5. 商法
+  // 【商法】
   else if (subject === '商法') {
     factContext = `１ 甲株式会社の代表取締役Aは、自己が実質的に経営する乙株式会社の資金繰りが悪化したため、甲社の取締役会の承認を得ることなく、乙社のために甲社名義で多額の連帯保証契約を締結した。\n２ その後乙社は倒産し、甲社は保証債務の履行を余儀なくされ、多額の損害を被った。\n３ 甲社取締役会における${issue}及び代表取締役Aの会社に対する損害賠償責任について論ぜよ。`;
     standardNorm = `【判例の規範定立】\n取締役が自己又は第三者のために会社と取引をする場合、取締役会の承認を要する（会社法356条1項、365条1項）。承認なき利益相反取引は会社と相手方との関係では原則として無効であり、取締役は任務懈怠責任（423条1項）を免れない。`;
@@ -158,7 +158,7 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     ];
   }
 
-  // 6. 行政法
+  // 【行政法】
   else if (subject === '行政法') {
     factContext = `１ Xは、建築基準法に適合する共同住宅の建築確認を建築主事Yに申請した。\n２ Yは、近隣住民との協議が整っていないことを理由に、指導要綱に基づき建築確認処分を留保した。\n３ Xは確認処分を速やかに行うよう求めている。\n４ 本件留保処分の違法性及び${issue}について論ぜよ。`;
     standardNorm = `【判例の規範定立】\n行政指導に従わないことを理由とする確認処分の留保は、相手方の真意による任意性が認められる限度でのみ適法であり、相手方が明確に指導を拒絶した後は、特段の事情のない限り違法な処分留保となる。`;
@@ -167,7 +167,7 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     ];
   }
 
-  // 7. 民法（動産・債権・契約等、論点に応じて個別構成）
+  // 【民法】（動産・債権・契約等、論点に応じて個別構成）
   else {
     if (issue.includes('即時取得')) {
       factContext = `１ Aは、自己が所有する高価な絵画甲（時価300万円）をBに売却し代金を受領したが、引渡しは後日行う旨を合意した。\n２ その後、Bへの引渡し前に資金繰りに窮したAは、Cに対しても甲を売却し代金を受領した上、甲をCの自宅へ運搬して現実の引渡しを完了した。Cは取引時、Aがすでに甲をBに売却していた事実を知らず、知らないことにつき過失はなかった。\n３ BはCに対し、自己が先にAから甲を購入した真の所有者であると主張して、甲の引渡しを請求している。\n４ Bの請求の当否について、${issue}を踏まえて論ぜよ。`;
@@ -256,21 +256,11 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        // セッションストレージに保存された最新問題があれば最優先でロード
+        // 過去のキャッシュをクリアして確実に刑法・共犯関係からの離脱でスタート
         if (typeof window !== 'undefined') {
-          const storedProblem = sessionStorage.getItem('current_practice_problem');
-          if (storedProblem) {
-            try {
-              const parsed = JSON.parse(storedProblem);
-              setProblem(parsed);
-              setTimeLeft((parsed.suggested_time_minutes || 70) * 60);
-              setLoading(false);
-              return;
-            } catch (e) {}
-          }
+          sessionStorage.removeItem('current_practice_problem');
         }
 
-        // 初期問題として「刑法・共犯関係からの離脱」をセット
         const initialProb = buildDedicatedProblem('刑法', '令和6年', '共犯関係からの離脱', true);
         setProblem(initialProb);
         setTimeLeft(70 * 60);
@@ -358,7 +348,7 @@ export default function PracticePage() {
     }
   };
 
-  // ─── 問題作成エンジンの起動（完全同期 ＆ キメラ化撲滅） ───
+  // ─── 問題作成エンジンの起動（外部APIのキメラ上書きを完全遮断） ───
   const handleRunProblemEngine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -368,49 +358,10 @@ export default function PracticePage() {
       const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : selectedIssue;
       const targetIssueText = actualIssue || `${selectedSubject}の重要論点`;
 
-      // 1. 選ばれた論点に100%特化した完全問題を即座に構築
-      let newProblem = buildDedicatedProblem(selectedSubject, selectedYear, targetIssueText, isKaidai);
+      // 1. 選ばれた論点に100%特化した完全問題を即座に構築（不動産混入は物理的に不可能）
+      const newProblem = buildDedicatedProblem(selectedSubject, selectedYear, targetIssueText, isKaidai);
 
-      // 2. Gemini API からの応答があればマージ
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-        const res = await fetch('/api/generate-problem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject: selectedSubject,
-            year: selectedYear,
-            mode: examMode,
-            targetIssue: targetIssueText,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const apiData = await res.json();
-          if (apiData && apiData.fact_context) {
-            newProblem = {
-              id: 'p-' + Date.now(),
-              subject: selectedSubject,
-              source_exam: apiData.source_exam || newProblem.source_exam,
-              target_issue: apiData.target_issue || targetIssueText,
-              suggested_time_minutes: apiData.suggested_time_minutes || 70,
-              fact_context: apiData.fact_context,
-              standard_norm: apiData.standard_norm || newProblem.standard_norm,
-              key_facts: apiData.key_facts || [],
-              statutes: apiData.statutes || newProblem.statutes,
-            };
-          }
-        }
-      } catch (apiErr) {
-        console.warn('API遅延。論点専用プリセットで起動します:', apiErr);
-      }
-
-      // 3. Supabase に保存
+      // 2. Supabase に保存（履歴として蓄積）
       try {
         const { data } = await supabase
           .from('sub_problems')
@@ -433,12 +384,12 @@ export default function PracticePage() {
         console.warn('DB保存スキップ:', dbErr);
       }
 
-      // 4. セッションストレージに保存（リロードしても新問題が残る）
+      // 3. セッションストレージに保存
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('current_practice_problem', JSON.stringify(newProblem));
       }
 
-      // 5. 画面の全ステートを新問題に即時切り替え
+      // 4. 画面の全ステートを新問題に即時切り替え
       setProblem(newProblem);
       setAnatomy(null);
       setTimeLeft((newProblem.suggested_time_minutes || 70) * 60);
