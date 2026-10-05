@@ -15,9 +15,8 @@ export async function POST(req: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      console.warn('GEMINI_API_KEY is not set. Returning template review.');
       return NextResponse.json({
-        feedback: `【システム簡易講評（APIキー設定待機中）】\n\n・起案文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒\n\n※Vercelの「Settings > Environment Variables」に GEMINI_API_KEY を登録すると、規範定立や事実あてはめを精査するAI自動添削が有効になります。`,
+        feedback: `【システム簡易講評（APIキー未設定）】\n\n・起案文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒\n\n※Vercelの「Settings > Environment Variables」に GEMINI_API_KEY を登録すると、AI自動添削が有効になります。`,
       });
     }
 
@@ -46,16 +45,18 @@ ${userDraft}
 【第３：三段論法・形式面の講評】
 【次回に向けた改善ポイント】`;
 
-    // 安定版 gemini-1.5-flash エンドポイント
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Google AI Studio 公式推奨の v1beta エンドポイント
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim(),
+      },
       body: JSON.stringify({
         contents: [
           {
-            role: 'user',
             parts: [{ text: prompt }],
           },
         ],
@@ -64,9 +65,9 @@ ${userDraft}
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Gemini API Error Body:', errText);
+      console.error('Gemini API Error Detail:', errText);
       return NextResponse.json({
-        feedback: `【通信エラー】Gemini APIの呼び出しに失敗しました（ステータス: ${response.status}）。\n詳細: ${errText}`,
+        feedback: `【Gemini APIエラー】ステータスコード: ${response.status}\n\nGoogleからのエラー詳細:\n${errText}`,
       });
     }
 
@@ -76,7 +77,7 @@ ${userDraft}
 
     return NextResponse.json({ feedback: feedbackText });
   } catch (error: any) {
-    console.error('API Route Error:', error);
+    console.error('API Route Exception:', error);
     return NextResponse.json(
       { error: error.message || '内部サーバーエラーが発生しました。' },
       { status: 500 }
