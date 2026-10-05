@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json({
-        feedback: `【システム簡易講評（APIキー未設定）】\n\n・起案文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒\n\n※Vercelの「Settings > Environment Variables」に GEMINI_API_KEY を登録すると、AI自動添削が有効になります。`,
+        feedback: `【システム簡易講評（APIキー未設定）】\n\n・起案文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒\n\n※Vercelに GEMINI_API_KEY を設定してください。`,
       });
     }
 
@@ -45,42 +46,19 @@ ${userDraft}
 【第３：三段論法・形式面の講評】
 【次回に向けた改善ポイント】`;
 
-    // Google AI Studio 公式推奨の v1beta エンドポイント
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey.trim(),
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
+    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Gemini API Error Detail:', errText);
-      return NextResponse.json({
-        feedback: `【Gemini APIエラー】ステータスコード: ${response.status}\n\nGoogleからのエラー詳細:\n${errText}`,
-      });
-    }
-
-    const data = await response.json();
-    const feedbackText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || '講評を生成できませんでした。';
+    const feedbackText = response.text || '講評を生成できませんでした。';
 
     return NextResponse.json({ feedback: feedbackText });
   } catch (error: any) {
     console.error('API Route Exception:', error);
-    return NextResponse.json(
-      { error: error.message || '内部サーバーエラーが発生しました。' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      feedback: `【採点処理エラー】\n${error.message || '予期せぬエラーが発生しました。'}`,
+    });
   }
 }
