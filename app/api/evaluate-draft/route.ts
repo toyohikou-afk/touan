@@ -46,22 +46,27 @@ ${userDraft}
 【第３：三段論法・形式面の講評】
 【次回に向けた改善ポイント】`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
-      }
-    );
+    // 安定版 gemini-1.5-flash エンドポイント
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+      }),
+    });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Gemini API Error:', errText);
+      console.error('Gemini API Error Body:', errText);
       return NextResponse.json({
-        feedback: `【通信エラー】Gemini APIの呼び出しに失敗しました（ステータス: ${response.status}）。VercelのGEMINI_API_KEY設定を確認してください。`,
+        feedback: `【通信エラー】Gemini APIの呼び出しに失敗しました（ステータス: ${response.status}）。\n詳細: ${errText}`,
       });
     }
 
