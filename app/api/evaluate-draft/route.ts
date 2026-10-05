@@ -47,36 +47,34 @@ ${userDraft}
 【次回に向けた改善ポイント】`;
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-    
-    // 優先順位順にモデルを試行（混雑時の自動迂回）
-    const candidateModels = [
-      'gemini-3.8-flash',
-      'gemini-3.8-pro',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
-    ];
 
+    // gemini-3.8-flash 単一で最大3回リトライ（一時混雑503対策）
     let feedbackText = '';
     let lastError: any = null;
 
-    for (const modelName of candidateModels) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await ai.models.generateContent({
-          model: modelName,
+          model: 'gemini-3.8-flash',
           contents: prompt,
         });
+
         if (response.text) {
           feedbackText = response.text;
-          break; // 成功したらループを抜ける
+          break;
         }
       } catch (err: any) {
-        console.warn(`Model ${modelName} failed or busy, trying next...`, err.message);
         lastError = err;
+        console.warn(`Gemini 3.8 Flash attempt ${attempt} failed:`, err.message);
+        if (attempt < 3) {
+          // 混雑時は1.5秒待機して再試行
+          await new Promise((res) => setTimeout(res, 1500));
+        }
       }
     }
 
     if (!feedbackText) {
-      throw lastError || new Error('すべてのAIモデルが混雑中です。少し待ってから再試行してください。');
+      throw lastError || new Error('採点生成に失敗しました。');
     }
 
     return NextResponse.json({ feedback: feedbackText });
