@@ -65,6 +65,18 @@ export default function PracticePage() {
   const [replaceWord, setReplaceWord] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
+  // ─── 問題作成ポップアップ（モーダル）状態 ───
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreatingProblem, setIsCreatingProblem] = useState(false);
+  const [newProblemForm, setNewProblemForm] = useState({
+    subject: '民法',
+    source_exam: '令和6年 予備試験',
+    target_issue: '',
+    suggested_time_minutes: 70,
+    fact_context: '',
+    standard_norm: '',
+  });
+
   // 初期データ読み込み
   useEffect(() => {
     async function initData() {
@@ -185,6 +197,65 @@ export default function PracticePage() {
     }
   };
 
+  // ─── ポップアップから問題を作成して即座に読み込む ───
+  const handleCreateProblemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProblemForm.target_issue.trim()) {
+      alert('論点・テーマを入力してください。');
+      return;
+    }
+    if (!newProblemForm.fact_context.trim()) {
+      alert('問題文・事実を入力してください。');
+      return;
+    }
+
+    try {
+      setIsCreatingProblem(true);
+      const { data, error } = await supabase
+        .from('sub_problems')
+        .insert({
+          subject: newProblemForm.subject,
+          source_exam: newProblemForm.source_exam || '作成問題',
+          target_issue: newProblemForm.target_issue,
+          suggested_time_minutes: Number(newProblemForm.suggested_time_minutes) || 70,
+          fact_context: newProblemForm.fact_context,
+          standard_norm: newProblemForm.standard_norm || '',
+          key_facts: [],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // 新しい問題を画面に即時ロード
+        setProblem(data);
+        setAnatomy(null);
+        setTimeLeft((data.suggested_time_minutes || 70) * 60);
+        setDraft('');
+        setIsTimerRunning(false);
+        setFeedback(null);
+        setShowCreateModal(false);
+
+        // フォーム初期化
+        setNewProblemForm({
+          subject: '民法',
+          source_exam: '令和6年 予備試験',
+          target_issue: '',
+          suggested_time_minutes: 70,
+          fact_context: '',
+          standard_norm: '',
+        });
+
+        alert('新しい問題を作成し、画面に読み込みました！');
+      }
+    } catch (err: any) {
+      alert('問題作成に失敗しました: ' + (err.message || '通信エラー'));
+    } finally {
+      setIsCreatingProblem(false);
+    }
+  };
+
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const charCount = draft.length;
@@ -194,7 +265,7 @@ export default function PracticePage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
       
-      {/* 1. 最上部ヘッダー（白基調・高コントラスト） */}
+      {/* 1. 最上部ヘッダー */}
       <header
         style={{
           position: 'sticky',
@@ -271,8 +342,9 @@ export default function PracticePage() {
           </div>
         </div>
 
-        {/* 右側：文字サイズ変更 & ナビゲーション */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* 右側：問題作成 ＆ 履歴一覧 ＆ 提出ボタン */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* 文字サイズ調整 */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 6px', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', marginRight: '2px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => {
@@ -298,6 +370,28 @@ export default function PracticePage() {
               );
             })}
           </div>
+
+          {/* ➕ 問題作成ボタン（ポップアップを開く） */}
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 4px rgba(2,132,199,0.3)',
+            }}
+          >
+            ➕ 問題作成
+          </button>
 
           <Link
             href="/dashboard"
@@ -703,6 +797,199 @@ export default function PracticePage() {
           </div>
         )}
       </div>
+
+      {/* ─── 4. 問題作成ポップアップ（モーダルダイアログ） ─── */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '640px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* モーダルヘッダー */}
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>➕</span>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
+                  新規問題の作成・登録
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '20px',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* モーダルフォーム */}
+            <form onSubmit={handleCreateProblemSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* 科目 ＆ 出典 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    科目 <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <select
+                    value={newProblemForm.subject}
+                    onChange={(e) => setNewProblemForm({ ...newProblemForm, subject: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff', color: '#0f172a', fontWeight: 'bold' }}
+                  >
+                    <option value="民法">民法</option>
+                    <option value="刑法">刑法</option>
+                    <option value="憲法">憲法</option>
+                    <option value="民事訴訟法">民事訴訟法</option>
+                    <option value="刑事訴訟法">刑事訴訟法</option>
+                    <option value="商法">商法</option>
+                    <option value="行政法">行政法</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    出典・年度
+                  </label>
+                  <input
+                    type="text"
+                    value={newProblemForm.source_exam}
+                    onChange={(e) => setNewProblemForm({ ...newProblemForm, source_exam: e.target.value })}
+                    placeholder="例: 令和6年 予備試験 設問1"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* 論点 ＆ 制限時間 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    論点・テーマ名 <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newProblemForm.target_issue}
+                    onChange={(e) => setNewProblemForm({ ...newProblemForm, target_issue: e.target.value })}
+                    placeholder="例: 民法94条2項類推適用（意思外観対応型）"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontWeight: 'bold' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    制限時間 (分)
+                  </label>
+                  <input
+                    type="number"
+                    value={newProblemForm.suggested_time_minutes}
+                    onChange={(e) => setNewProblemForm({ ...newProblemForm, suggested_time_minutes: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* 問題文・事実 */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                  問題文・事実関係 <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <textarea
+                  required
+                  rows={6}
+                  value={newProblemForm.fact_context}
+                  onChange={(e) => setNewProblemForm({ ...newProblemForm, fact_context: e.target.value })}
+                  placeholder="問題文を入力してください...&#10;１ Aは、自己の所有する甲土地について..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'serif', lineHeight: '1.6' }}
+                />
+              </div>
+
+              {/* 判例規範（任意） */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                  標準規範・採点基準（任意）
+                </label>
+                <textarea
+                  rows={3}
+                  value={newProblemForm.standard_norm}
+                  onChange={(e) => setNewProblemForm({ ...newProblemForm, standard_norm: e.target.value })}
+                  placeholder="模範的な規範定立（AI採点時の採点基準として参照されます）"
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box', lineHeight: '1.5' }}
+                />
+              </div>
+
+              {/* フッターアクションボタン */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#475569',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingProblem}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: isCreatingProblem ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(2,132,199,0.3)',
+                  }}
+                >
+                  {isCreatingProblem ? '登録中...' : '💾 保存して起案を開始'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
