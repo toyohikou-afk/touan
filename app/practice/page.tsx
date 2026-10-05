@@ -91,7 +91,7 @@ const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   },
 };
 
-// ─── 不動産テンプレを完全根絶：事実１から設問まで100%専用問題生成関数 ───
+// ─── 不動産の混入を100%根絶：事実１〜設問まで完全専用問題ビルダー ───
 function buildDedicatedProblem(subject: string, year: string, issue: string, isKaidai: boolean): ProblemData {
   const sourceExam = `${year} 予備試験${isKaidai ? '改題' : ''}`;
   let factContext = '';
@@ -167,7 +167,7 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
     ];
   }
 
-  // 【民法】（動産・債権・契約等、論点に応じて個別構成）
+  // 【民法】
   else {
     if (issue.includes('即時取得')) {
       factContext = `１ Aは、自己が所有する高価な絵画甲（時価300万円）をBに売却し代金を受領したが、引渡しは後日行う旨を合意した。\n２ その後、Bへの引渡し前に資金繰りに窮したAは、Cに対しても甲を売却し代金を受領した上、甲をCの自宅へ運搬して現実の引渡しを完了した。Cは取引時、Aがすでに甲をBに売却していた事実を知らず、知らないことにつき過失はなかった。\n３ BはCに対し、自己が先にAから甲を購入した真の所有者であると主張して、甲の引渡しを請求している。\n４ Bの請求の当否について、${issue}を踏まえて論ぜよ。`;
@@ -175,6 +175,12 @@ function buildDedicatedProblem(subject: string, year: string, issue: string, isK
       statutes = [
         { title: '民法 第192条（即時取得）', text: '取引行為によって、平穏に、かつ、公然と動産の占有を始めた者は、善意であり、かつ、過失がないときは、即時にその動産について行使する権利を取得する。' },
         { title: '民法 第178条（動産に関する物権の譲渡の対抗要件）', text: '動産に関する物権の譲渡は、その動産の引渡しがなければ、第三者に対抗することができない。' },
+      ];
+    } else if (issue.includes('94条')) {
+      factContext = `１ Aは、所有する甲土地について、親族Bの承諾を得て一時的に名義のみをB名義とする所有権移転登記を経由させた。\n２ その後、BはAに無断で、自らが甲土地の真の所有者であると偽り、善意無過失のCに対して甲土地を売却し、登記を移転した。\n３ AはCに対し、自己が真の所有者であると主張して、所有権確認及び登記の抹消を請求した。\n４ Aの請求が認められるか否かについて、${issue}を含めて論ぜよ。`;
+      standardNorm = `【判例の規範定立】\n自ら不実の登記を作出した本人の帰責性は極めて重いため、民法94条2項が類推適用され、第三者は善意であれば足り、無過失までは不要である。`;
+      statutes = [
+        { title: '民法 第94条（虚偽表示）', text: '２ 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
       ];
     } else if (issue.includes('契約不適合') || issue.includes('解除')) {
       factContext = `１ AはBから、中古機械甲を事業用として代金1,000万円で購入した。\n２ 引渡し後、通常の使用環境において甲の内部基板がショートし稼働不能となった。調査の結果、納品前から基板に重大な経年劣化が存在していたことが判明した。\n３ AはBに対し、契約の目的を達成できないとして解除通知を発信するとともに、代金全額の返還を請求した。\n４ Aの請求の当否について、${issue}を踏まえて論ぜよ。`;
@@ -256,11 +262,12 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        // 過去のキャッシュをクリアして確実に刑法・共犯関係からの離脱でスタート
+        // 過去の古いキャッシュを完全破棄
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('current_practice_problem');
         }
 
+        // 初期問題として「刑法・共犯関係からの離脱」を100%専用問題でセット
         const initialProb = buildDedicatedProblem('刑法', '令和6年', '共犯関係からの離脱', true);
         setProblem(initialProb);
         setTimeLeft(70 * 60);
@@ -348,8 +355,8 @@ export default function PracticePage() {
     }
   };
 
-  // ─── 問題作成エンジンの起動（外部APIのキメラ上書きを完全遮断） ───
-  const handleRunProblemEngine = async (e: React.FormEvent) => {
+  // ─── 問題作成エンジンの起動（外部APIによるキメラ上書きを完全遮断） ───
+  const handleRunProblemEngine = (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsGenerating(true);
@@ -358,38 +365,34 @@ export default function PracticePage() {
       const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : selectedIssue;
       const targetIssueText = actualIssue || `${selectedSubject}の重要論点`;
 
-      // 1. 選ばれた論点に100%特化した完全問題を即座に構築（不動産混入は物理的に不可能）
+      // ★ 外部APIを呼ばず、100%純粋な専用問題文を直接構築（キメラ混入は物理的に不可能）
       const newProblem = buildDedicatedProblem(selectedSubject, selectedYear, targetIssueText, isKaidai);
 
-      // 2. Supabase に保存（履歴として蓄積）
-      try {
-        const { data } = await supabase
-          .from('sub_problems')
-          .insert({
-            subject: newProblem.subject,
-            source_exam: newProblem.source_exam,
-            target_issue: newProblem.target_issue,
-            suggested_time_minutes: newProblem.suggested_time_minutes,
-            fact_context: newProblem.fact_context,
-            standard_norm: newProblem.standard_norm,
-            key_facts: [],
-          })
-          .select()
-          .single();
+      // Supabase に保存
+      supabase
+        .from('sub_problems')
+        .insert({
+          subject: newProblem.subject,
+          source_exam: newProblem.source_exam,
+          target_issue: newProblem.target_issue,
+          suggested_time_minutes: newProblem.suggested_time_minutes,
+          fact_context: newProblem.fact_context,
+          standard_norm: newProblem.standard_norm,
+          key_facts: [],
+        })
+        .select()
+        .single()
+        .then(({ data }) => {
+          if (data) newProblem.id = data.id;
+        })
+        .catch(() => {});
 
-        if (data) {
-          newProblem.id = data.id;
-        }
-      } catch (dbErr) {
-        console.warn('DB保存スキップ:', dbErr);
-      }
-
-      // 3. セッションストレージに保存
+      // セッションストレージに保存
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('current_practice_problem', JSON.stringify(newProblem));
       }
 
-      // 4. 画面の全ステートを新問題に即時切り替え
+      // 画面の全ステートを新問題に即時切り替え
       setProblem(newProblem);
       setAnatomy(null);
       setTimeLeft((newProblem.suggested_time_minutes || 70) * 60);
