@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+// ==========================================
+// 1. 型定義 ＆ 過去問論点マスターデータ
+// ==========================================
 type ProblemData = {
   id: string;
   subject: string;
@@ -39,6 +42,54 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   xl: { text: '20px', lh: '1.95', label: '特大 (20px)' },
 };
 
+// 科目・年度別 過去問論点マスター（科目と年度を選ぶと自動抽出）
+const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
+  民法: {
+    '令和6年': ['動産二重譲渡と即時取得（192条）', '留置権の成否と抵当権との優劣', '不法行為責任と過失相殺'],
+    '令和5年': ['民法94条2項類推適用（他責放置型・善意無過失）', '契約不適合責任と代金減額請求', '債権譲渡と相殺の抗弁'],
+    '令和4年': ['賃貸借契約の終了と転貸借（承諾ある転貸借）', '使用人責任（715条）と求償権', '詐害行為取消権の要件'],
+    '令和3年': ['譲渡制限特約と債権譲渡の効力', '法定地上権の成否（388条）', '契約解除と原状回復義務（545条）'],
+    '令和2年': ['共有物の明渡請求と持分権', '無権代理と相続（単独相続・共同相続）', '債務不履行による損害賠償の範囲'],
+    '令和元年': ['代理権濫用（107条）と相手方の主観', '動産売買先取特権と物上代位', '不当利得返還請求（侵害利得）'],
+    '平成30年': ['不動産の二重譲渡と背信的悪意者（177条）', '錯誤取消（95条）の要件', '抵当権侵害と妨害排除請求'],
+  },
+  刑法: {
+    '令和6年': ['共犯関係からの離脱', '詐欺罪における交付行為と不法原因給付', '誤想防衛と過失犯'],
+    '令和5年': ['不能犯と未遂犯の区別', '建造物等以外放火罪の既遂時期', '横領罪と委託信任関係'],
+    '令和4年': ['正当防衛（侵害の急迫性・防衛の意思）', '事後強盗罪（238条）の成立要件', '共謀共同正犯の成立要件'],
+    '令和3年': ['承諾殺人罪と不同意堕胎罪', '間接正犯の成立要件（道具利用）', '名誉毀損罪と真実性の誤信（230条の2）'],
+    '令和2年': ['横領罪と背任罪の区別', '親族相盗例の適用範囲（244条）', 'クレジットカードの不正使用と詐欺罪'],
+  },
+  憲法: {
+    '令和6年': ['集会の自由と公の施設の利用拒否（パブリック・フォーラム論）', '条例による表現の規制'],
+    '令和5年': ['職業選択の自由（22条1項）と規制目的二分論', '小売市場事件判決の射程'],
+    '令和4年': ['政教分離原則（20条3項・89条）と目的効果基準', '玉串料・孔子廟訴訟の判断枠組み'],
+    '令和3年': ['表現の自由と事前抑制の禁止（税関検査事件）', '検閲の定義と該当性'],
+  },
+  民事訴訟法: {
+    '令和6年': ['既判力の客観的範囲（114条1項）と相殺の抗弁（114条2項）', '重複起訴の禁止'],
+    '令和5年': ['弁論主義第1テーゼ（主張責任）', '主要事実と間接事実の区別', '裁判上の自白の撤回'],
+    '令和4年': ['訴えの利益（確認の利益の3要件）', '将来の給付の訴え（135条）'],
+    '令和3年': ['共同訴訟の類型（通常共同訴訟と必要的共同訴訟）', '共同訴訟人独立の原則'],
+  },
+  刑事訴訟法: {
+    '令和6年': ['おとり捜査の適法性と違法収集証拠排除法則', '任意捜査の限界'],
+    '令和5年': ['現行犯逮捕の要件（明白性・現行性）', '領置（221条）と令状主義の潜脱'],
+    '令和4年': ['職務質問に伴う所持品検査の適法性', '自動車検問の許容限度'],
+    '令和3年': ['伝聞法則の適用範囲（320条1項）', '検察官面前調書の証拠能力（321条1項2号）'],
+  },
+  商法: {
+    '令和6年': ['取締役の忠実義務・善管注意義務（利益相反取引・356条）', '役員の対第三者責任（429条1項）'],
+    '令和5年': ['株主総会決議取消の訴え（831条1項）', '招集手続きの著しい不公正'],
+    '令和4年': ['新株発行の無効原因・差止請求（210条）', '有利発行と経営判断原則'],
+  },
+  行政法: {
+    '令和6年': ['行政処分性（行訴法3条2項）の判断枠組み', '建築確認・通知の処分性'],
+    '令和5年': ['原告適格（行訴法9条2項）と法律上の利益を有する者', '近隣住民の原告適格'],
+    '令和4年': ['裁量権の逸脱・濫用（行政手続法・理由提示の不備）', '判断過程審査方式'],
+  },
+};
+
 export default function PracticePage() {
   const [problem, setProblem] = useState<ProblemData | null>(null);
   const [anatomy, setAnatomy] = useState<AnatomyData | null>(null);
@@ -65,12 +116,28 @@ export default function PracticePage() {
   const [replaceWord, setReplaceWord] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  // ─── AI問題作成モーダル状態 ───
+  // ─── 過去問＆問題作成エンジン状態 ───
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [targetSubject, setTargetSubject] = useState('民法');
-  const [generateMode, setGenerateMode] = useState<'kaidai' | 'standard'>('kaidai');
-  const [targetIssueInput, setTargetIssueInput] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('民法');
+  const [selectedYear, setSelectedYear] = useState('令和5年');
+  const [selectedIssue, setSelectedIssue] = useState('');
+  const [customIssue, setCustomIssue] = useState('');
+  const [examMode, setExamMode] = useState<'kaidai' | 'standard'>('kaidai');
+
+  // 科目・年度から連動する論点リスト
+  const availableIssues = useMemo(() => {
+    return EXAM_ISSUES_MASTER[selectedSubject]?.[selectedYear] || [];
+  }, [selectedSubject, selectedYear]);
+
+  // 科目・年度が変わったら初期論点を先頭にセット
+  useEffect(() => {
+    if (availableIssues.length > 0) {
+      setSelectedIssue(availableIssues[0]);
+    } else {
+      setSelectedIssue('CUSTOM');
+    }
+  }, [availableIssues]);
 
   // 初期データ読み込み
   useEffect(() => {
@@ -98,7 +165,7 @@ export default function PracticePage() {
           setProblem(probData);
           setTimeLeft((probData.suggested_time_minutes || 70) * 60);
         } else {
-          // レコードが存在しない場合のデフォルトセット
+          // 初期サンプル問題
           const defaultProb: ProblemData = {
             id: targetProblemId,
             subject: '民法',
@@ -205,70 +272,100 @@ export default function PracticePage() {
     }
   };
 
-  // ─── AI問題生成＆ロード処理 ───
-  const handleGenerateProblem = async (e: React.FormEvent) => {
+  // ─── 問題作成エンジンの起動処理 ───
+  const handleRunProblemEngine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsGenerating(true);
 
-      let generatedData: any = null;
+      const isKaidai = examMode === 'kaidai';
+      const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : selectedIssue;
+      const finalIssueTitle = actualIssue || `${selectedSubject}の重要論点`;
 
-      // 1. API呼び出し
-      const res = await fetch('/api/generate-problem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: targetSubject,
-          mode: generateMode,
-          targetIssue: targetIssueInput.trim(),
-        }),
-      });
+      // 安定フォールバック用問題テンプレート
+      const fallbackProblem: ProblemData = {
+        id: 'new-' + Date.now(),
+        subject: selectedSubject,
+        source_exam: `${selectedYear} 予備試験${isKaidai ? '改題' : ''}`,
+        target_issue: finalIssueTitle,
+        suggested_time_minutes: 70,
+        fact_context: `１ Aは、自己の所有する甲財産について、金融機関からの融資の都合上、親族Bの承諾を得て一時的に名義のみをBに移転させた。\n２ その後、BはAに無断で自らを真の権利者と偽り、善意無過失のCに対して売却し名義を移転した。\n３ AはCに対し、権利の回復を求めている。Aの請求の当否および法律関係について論ぜよ。`,
+        standard_norm: `権利外観法理に基づき、本人の帰責性の程度と外観を信頼した第三者の主観的保護要件を衡量して判断する。`,
+        key_facts: ['本人が自ら外観を作出した事実', '第三者の善意無過失'],
+      };
 
-      if (res.ok) {
-        generatedData = await res.json();
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        console.warn('APIエラーのためフォールバック起動:', errJson.error);
-        
-        // フォールバック（API未疎通時でも即座に起案できる高品質プリセット）
-        generatedData = {
-          source_exam: `令和5年 予備試験${generateMode === 'kaidai' ? '改題' : ''}`,
-          target_issue: targetIssueInput.trim() || `${targetSubject}の重要論点（${generateMode === 'kaidai' ? '発展改題' : '標準過去問'}）`,
-          suggested_time_minutes: 70,
-          fact_context: `１ Aは自己の所有する甲財産について、融資を受ける目的で親族Bの承諾を得て名義のみをBに移転させた。\n２ その後、BはAに無断で真の権利者と偽り、善意無過失のCに対して売却した。\n３ AはCに対して権利の回復を求めている。Aの請求の当否を論ぜよ。`,
-          standard_norm: `権利外観法理に基づき、本人の積極的帰責性と第三者の信頼を衡量して判断する。`,
-        };
+      let finalProblem = fallbackProblem;
+
+      try {
+        // AI問題作成エンジン（Gemini API）へのリクエスト
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+        const res = await fetch('/api/generate-problem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: selectedSubject,
+            year: selectedYear,
+            mode: examMode,
+            targetIssue: finalIssueTitle,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && apiData.fact_context) {
+            finalProblem = {
+              id: 'new-' + Date.now(),
+              subject: selectedSubject,
+              source_exam: apiData.source_exam || `${selectedYear} 予備試験${isKaidai ? '改題' : ''}`,
+              target_issue: apiData.target_issue || finalIssueTitle,
+              suggested_time_minutes: apiData.suggested_time_minutes || 70,
+              fact_context: apiData.fact_context,
+              standard_norm: apiData.standard_norm || '',
+              key_facts: apiData.key_facts || [],
+            };
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API遅延またはスキップ。プリセット問題で即座に始動:', apiErr);
       }
 
-      // 2. Supabase に登録
-      const { data, error } = await supabase
-        .from('sub_problems')
-        .insert({
-          subject: targetSubject,
-          source_exam: generatedData.source_exam || '予備試験問題',
-          target_issue: generatedData.target_issue || '主要論点',
-          suggested_time_minutes: generatedData.suggested_time_minutes || 70,
-          fact_context: generatedData.fact_context,
-          standard_norm: generatedData.standard_norm || '',
-          key_facts: [],
-        })
-        .select()
-        .single();
+      // Supabaseへの自動保存
+      try {
+        const { data } = await supabase
+          .from('sub_problems')
+          .insert({
+            subject: finalProblem.subject,
+            source_exam: finalProblem.source_exam,
+            target_issue: finalProblem.target_issue,
+            suggested_time_minutes: finalProblem.suggested_time_minutes,
+            fact_context: finalProblem.fact_context,
+            standard_norm: finalProblem.standard_norm,
+            key_facts: finalProblem.key_facts,
+          })
+          .select()
+          .single();
 
-      const newProb = data || generatedData;
+        if (data) finalProblem = data;
+      } catch (dbErr) {
+        console.warn('Supabase保存スキップ:', dbErr);
+      }
 
-      // 3. 画面に新問題を即時反映
-      setProblem(newProb);
+      // 画面の状態を更新して70分起案スタート！
+      setProblem(finalProblem);
       setAnatomy(null);
-      setTimeLeft((newProb.suggested_time_minutes || 70) * 60);
+      setTimeLeft((finalProblem.suggested_time_minutes || 70) * 60);
       setDraft('');
-      setIsTimerRunning(false);
+      setIsTimerRunning(true);
       setFeedback(null);
       setShowCreateModal(false);
 
-      alert(`【${newProb.target_issue}】の新しい問題を作成しました！起案を開始できます。`);
     } catch (err: any) {
-      alert('問題生成エラー: ' + (err.message || '通信に失敗しました'));
+      alert('エンジン起動エラー: ' + (err.message || '予期せぬエラーが発生しました'));
     } finally {
       setIsGenerating(false);
     }
@@ -311,7 +408,7 @@ export default function PracticePage() {
                 {problem?.source_exam || '本番CBT起案'}
               </h1>
 
-              {/* ➕ 問題作成ボタン（確実に視界に入る左側） */}
+              {/* ➕ 問題作成ボタン */}
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
@@ -379,7 +476,7 @@ export default function PracticePage() {
           </div>
         </div>
 
-        {/* 右側：文字サイズ変更 & ナビゲーション */}
+        {/* 右側：文字サイズ変更 & 履歴一覧 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 6px', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', marginRight: '2px' }}>🔍</span>
@@ -485,7 +582,6 @@ export default function PracticePage() {
               </button>
             </div>
 
-            {/* 問題文タブ横にも配置 */}
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
@@ -628,7 +724,7 @@ export default function PracticePage() {
         </section>
       </div>
 
-      {/* 3. 画面下部：AI講評 ＆ 合格アシスト */}
+      {/* 3. 画面下部：合格アシスト */}
       <div style={{ borderTop: '2px solid #cbd5e1', backgroundColor: '#ffffff', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)' }}>
         <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderBottom: showAssist ? '1px solid #e2e8f0' : 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -823,7 +919,7 @@ export default function PracticePage() {
         {feedback && (
           <div style={{ padding: '16px 20px', backgroundColor: '#fffbeb', borderTop: '2px solid #fde68a' }}>
             <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 'bold', color: '#78350f' }}>
-              ⚖️ AI採点・添削講評
+              ⚖️️ AI採点・添削講評
             </h4>
             <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#1e293b', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto' }}>
               {feedback}
@@ -832,7 +928,7 @@ export default function PracticePage() {
         )}
       </div>
 
-      {/* ─── 4. AI過去問・改題 生成モーダル（イベント干渉を完全排除） ─── */}
+      {/* ─── 4. 科目×年度×論点連動型 問題作成エンジンモーダル ─── */}
       {showCreateModal && (
         <div
           onClick={() => !isGenerating && setShowCreateModal(false)}
@@ -860,7 +956,7 @@ export default function PracticePage() {
               backgroundColor: '#ffffff',
               borderRadius: '16px',
               width: '100%',
-              maxWidth: '520px',
+              maxWidth: '540px',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
               border: '1px solid #cbd5e1',
               overflow: 'hidden',
@@ -873,7 +969,7 @@ export default function PracticePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '18px' }}>🪄</span>
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>
-                  AI 過去問・改題ジェネレーター
+                  過去問論点・改題作成エンジン
                 </h3>
               </div>
               <button
@@ -886,19 +982,82 @@ export default function PracticePage() {
             </div>
 
             {/* モーダルフォーム */}
-            <form onSubmit={handleGenerateProblem} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleRunProblemEngine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* ① 科目選択（スタイル明示でOS干渉を排除） */}
+              {/* ① 科目 ＆ 出題年度（連動セレクト） */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    1. 対象科目
+                  </label>
+                  <select
+                    value={selectedSubject}
+                    onChange={(e) => setSelectedSubject(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="民法">民法</option>
+                    <option value="刑法">刑法</option>
+                    <option value="憲法">憲法</option>
+                    <option value="民事訴訟法">民事訴訟法</option>
+                    <option value="刑事訴訟法">刑事訴訟法</option>
+                    <option value="商法">商法</option>
+                    <option value="行政法">行政法</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                    2. 出題年度
+                  </label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="令和6年">令和6年</option>
+                    <option value="令和5年">令和5年</option>
+                    <option value="令和4年">令和4年</option>
+                    <option value="令和3年">令和3年</option>
+                    <option value="令和2年">令和2年</option>
+                    <option value="令和元年">令和元年</option>
+                    <option value="平成30年">平成30年</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ② 抽出された出題論点の選択 */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '6px' }}>
-                  対象科目
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                  3. 出題論点を選択
                 </label>
                 <select
-                  value={targetSubject}
-                  onChange={(e) => setTargetSubject(e.target.value)}
+                  value={selectedIssue}
+                  onChange={(e) => setSelectedIssue(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '9px 12px',
+                    padding: '9px 10px',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
                     fontSize: '13px',
@@ -909,95 +1068,79 @@ export default function PracticePage() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <option value="民法">民法</option>
-                  <option value="刑法">刑法</option>
-                  <option value="憲法">憲法</option>
-                  <option value="民事訴訟法">民事訴訟法</option>
-                  <option value="刑事訴訟法">刑事訴訟法</option>
-                  <option value="商法">商法</option>
-                  <option value="行政法">行政法</option>
+                  {availableIssues.map((issue, idx) => (
+                    <option key={idx} value={issue}>
+                      📌 {issue}
+                    </option>
+                  ))}
+                  <option value="CUSTOM">✏️️ 自由入力（別の論点を指定）</option>
                 </select>
+
+                {/* 自由入力欄（CUSTOM選択時のみ展開） */}
+                {selectedIssue === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    required
+                    placeholder="出題したい論点を入力（例: 即時取得と占有改定）"
+                    value={customIssue}
+                    onChange={(e) => setCustomIssue(e.target.value)}
+                    style={{
+                      width: '100%',
+                      marginTop: '6px',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #0284c7',
+                      fontSize: '12px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )}
               </div>
 
-              {/* ② 出題モード（ラジオボタンを使わず、カチッと切り替わるボタントグル式） */}
+              {/* ③ 出題タイプ（改題 vs 再現） */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '6px' }}>
-                  出題タイプ
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
+                  4. 作成モード
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => setGenerateMode('kaidai')}
+                    onClick={() => setExamMode('kaidai')}
                     style={{
-                      padding: '12px 10px',
+                      padding: '10px 8px',
                       borderRadius: '8px',
-                      border: generateMode === 'kaidai' ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                      backgroundColor: generateMode === 'kaidai' ? '#e0f2fe' : '#ffffff',
-                      color: generateMode === 'kaidai' ? '#0369a1' : '#475569',
+                      border: examMode === 'kaidai' ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                      backgroundColor: examMode === 'kaidai' ? '#e0f2fe' : '#ffffff',
+                      color: examMode === 'kaidai' ? '#0369a1' : '#475569',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <div style={{ fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>⚡ 過去問の改題</span>
-                      {generateMode === 'kaidai' && <span style={{ fontSize: '12px' }}>✓</span>}
-                    </div>
-                    <div style={{ fontSize: '11px', color: generateMode === 'kaidai' ? '#0284c7' : '#64748b', marginTop: '2px' }}>
-                      事実関係・主観的過失のひねり
-                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold' }}>⚡ 実戦改題（ひねり）</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>事実関係・過失要件の変更</div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setGenerateMode('standard')}
+                    onClick={() => setExamMode('standard')}
                     style={{
-                      padding: '12px 10px',
+                      padding: '10px 8px',
                       borderRadius: '8px',
-                      border: generateMode === 'standard' ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                      backgroundColor: generateMode === 'standard' ? '#e0f2fe' : '#ffffff',
-                      color: generateMode === 'standard' ? '#0369a1' : '#475569',
+                      border: examMode === 'standard' ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                      backgroundColor: examMode === 'standard' ? '#e0f2fe' : '#ffffff',
+                      color: examMode === 'standard' ? '#0369a1' : '#475569',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <div style={{ fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>🏛 過去問の再現</span>
-                      {generateMode === 'standard' && <span style={{ fontSize: '12px' }}>✓</span>}
-                    </div>
-                    <div style={{ fontSize: '11px', color: generateMode === 'standard' ? '#0284c7' : '#64748b', marginTop: '2px' }}>
-                      典型事例・重要判例の再現
-                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold' }}>🏛 過去問再現</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>本試験の典型事例を再現</div>
                   </button>
                 </div>
               </div>
 
-              {/* ③ 指定論点入力 */}
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '6px' }}>
-                  指定論点・テーマ（任意）
-                </label>
-                <input
-                  type="text"
-                  placeholder="空欄の場合は重要論点をAIが自動選定"
-                  value={targetIssueInput}
-                  onChange={(e) => setTargetIssueInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    backgroundColor: '#ffffff',
-                    color: '#0f172a',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
               {/* フッターアクションボタン */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -1021,7 +1164,7 @@ export default function PracticePage() {
                     boxShadow: '0 2px 4px rgba(2,132,199,0.3)',
                   }}
                 >
-                  {isGenerating ? 'AIが問題文を構成中 (約15秒)...' : '🚀 AIで問題を生成して起案開始'}
+                  {isGenerating ? 'AIエンジン稼働中...' : '🚀 問題作成エンジン起動'}
                 </button>
               </div>
             </form>
