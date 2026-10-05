@@ -4,9 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
-// ==========================================
-// 1. 型定義 ＆ 過去問論点マスターデータ
-// ==========================================
 type ProblemData = {
   id: string;
   subject: string;
@@ -42,7 +39,7 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   xl: { text: '20px', lh: '1.95', label: '特大 (20px)' },
 };
 
-// 過去問論点マスター（科目×年度）
+// 科目・年度別 過去問論点マスター
 const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   民法: {
     '令和6年': ['動産二重譲渡と即時取得（192条）', '留置権の成否と抵当権との優劣', '不法行為責任と過失相殺'],
@@ -90,48 +87,6 @@ const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   },
 };
 
-// 選択した論点に直結する即時問題生成ジェネレーター（APIが落ちても選んだ論点の問題に100%差し替わる）
-function generateTargetProblem(subject: string, year: string, issue: string, isKaidai: boolean): ProblemData {
-  const sourceExam = `${year} 予備試験${isKaidai ? '改題' : ''}`;
-  let factContext = '';
-  let standardNorm = '';
-
-  if (subject === '刑法') {
-    factContext = `１ 甲は、乙と共謀し、深夜にV宅へ侵入して金品を窃取することを計画した。\n２ 当日、甲と乙はV宅の敷地内に侵入したが、物音に気づいたVが起き出してきたため、甲は恐ろしくなり「俺はもうやめる、帰るぞ」と乙に告げ、その場から逃走した。\n３ 乙はそのままV宅内に侵入し、Vに暴行を加えて反抗を抑圧した上、現金50万円を強奪した。\n４ 甲及び乙の罪責について、${issue}の成否を含めて論ぜよ。`;
-    standardNorm = `共謀共同正犯における離脱が認められるためには、当初の共謀に基づく因果性を遮断したといえることが必要であり、実行着手後の離脱においては他の共犯者の犯行を物理的・心理的に阻止する措置が必要である。`;
-  } else if (subject === '憲法') {
-    factContext = `１ X団体は、特定の政策に反対する市民集会及びパレードを開催するため、Y市が管理する市民会館の利用許可を申請した。\n２ 市長Yは、過去に同種の集会において反対派との間で小競り合いが生じた経緯を理由に、公の秩序を乱すおそれがあるとして利用を不許可とする処分を行った。\n３ Xは、本件不許可処分は憲法21条1項等に違反し違憲無効であるとして提訴した。\n４ 本件不許可処分の憲法上の当否について、${issue}の判断枠組みを示して論ぜよ。`;
-    standardNorm = `公の施設は住民の集会等の用に供するために設置されたものであり、正当な理由がない限り利用を拒否できない（地方自治法244条2項）。利用不許可が正当化されるのは、人の生命・身体・財産が侵害される明らかな差し迫った危険が具体的に予見される場合に限られる。`;
-  } else if (subject === '民事訴訟法') {
-    factContext = `１ XはYに対し、売買代金請求訴訟を提起した。\n２ Yは弁済の抗弁を主張するとともに、予備的にXに対する別個の貸金債権を自働債権とする相殺の抗弁を主張した。\n３ 裁判所は売買代金請求を認容し、相殺の抗弁を排斥する判決を下し、同判決は確定した。\n４ その後、YがXに対し、上記貸金債権に基づき貸金返還請求訴訟を提起した場合における${issue}について論ぜよ。`;
-    standardNorm = `相殺の主張についての判断には既判力が及ぶ（民訴法114条2項）。その客観的範囲は、自働債権の存否につき相殺をもって対抗した額の限度で生じ、後訴における矛盾判断を遮断する。`;
-  } else if (subject === '刑事訴訟法') {
-    factContext = `１ 司法警察員Kらは、覚醒剤密売の疑いがある甲に対し、身分を秘匿して接触し、覚醒剤の購入を持ちかけた。\n２ 甲は当初躊躇したものの、Kらの執拗な説得に応じ、指定場所において覚醒剤を譲り渡した。\n３ Kらはその場で甲を現行犯逮捕し、覚醒剤を押収した。\n４ 本件捜査の適法性及び押収された覚醒剤の証拠能力について、${issue}を踏まえて論ぜよ。`;
-    standardNorm = `捜査機関が身分を秘匿して犯意を誘発するおとり捜査は、直接の被害者がいない薬物犯罪等において、通常の捜査方法のみでは摘発が困難な場合に、相当な方法による限り適法である。違法な捜査によって収集された証拠は、重大な違法があり排除が相当と認められるときは証拠能力を失う。`;
-  } else if (subject === '商法') {
-    factContext = `１ 甲株式会社の代表取締役Aは、自己が経営する乙株式会社の資金繰りが悪化したため、甲社の取締役会の承認を得ることなく、乙社のために甲社名義で多額の連帯保証契約を締結した。\n２ 乙社は倒産し、甲社は保証債務の履行を余儀なくされ損害を被った。\n３ 甲社取締役会における${issue}及び代表取締役Aの会社に対する損害賠償責任について論ぜよ。`;
-    standardNorm = `取締役が自己又は第三者のために会社と取引をする場合、取締役会の承認を要する（会社法356条1項、365条1項）。承認なき利益相反取引は会社と相手方との関係では原則として無効であり、取締役は任務懈怠責任（423条1項）を免れない。`;
-  } else if (subject === '行政法') {
-    factContext = `１ Xは、建築基準法に適合する共同住宅の建築確認を建築主事Yに申請した。\n２ Yは、近隣住民との協議が整っていないことを理由に、指導要綱に基づき建築確認処分を留保した。\n３ Xは確認処分を速やかに行うよう求めている。\n４ 本件留保処分の違法性及び${issue}について論ぜよ。`;
-    standardNorm = `行政指導に従わないことを理由とする確認処分の留保は、相手方の真意による任意性が認められる限度でのみ適法であり、相手方が明確に指導を拒絶した後は、特段の事情のない限り違法な処分留保となる。`;
-  } else {
-    // 民法その他
-    factContext = `１ Aは、所有する甲不動産について、融資を受ける目的で親族Bの承諾を得て名義のみをBに移転させる登記を経由させた。\n２ その後、BはAに無断で、善意無過失のCに対して甲不動産を売却し所有権移転登記を完了した。\n３ AはCに対し、真の所有者であると主張して所有権移転登記の抹消を請求した。\n４ Aの請求の当否について、${issue}を踏まえて論ぜよ。`;
-    standardNorm = `権利外観法理に基づき、本人が自ら虚偽の外観を作出した場合には、善意の第三者を保護するため、本人の所有権主張は制限される。`;
-  }
-
-  return {
-    id: 'gen-' + Date.now(),
-    subject,
-    source_exam: sourceExam,
-    target_issue: issue,
-    suggested_time_minutes: 70,
-    fact_context: factContext,
-    standard_norm: standardNorm,
-    key_facts: [],
-  };
-}
-
 export default function PracticePage() {
   const [problem, setProblem] = useState<ProblemData | null>(null);
   const [anatomy, setAnatomy] = useState<AnatomyData | null>(null);
@@ -158,7 +113,7 @@ export default function PracticePage() {
   const [replaceWord, setReplaceWord] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  // ─── 過去問＆問題作成エンジン状態 ───
+  // ─── 問題作成エンジンモーダル状態 ───
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState('民法');
@@ -167,12 +122,11 @@ export default function PracticePage() {
   const [customIssue, setCustomIssue] = useState('');
   const [examMode, setExamMode] = useState<'kaidai' | 'standard'>('kaidai');
 
-  // 科目・年度から連動する論点リスト
+  // 連動論点リスト
   const availableIssues = useMemo(() => {
     return EXAM_ISSUES_MASTER[selectedSubject]?.[selectedYear] || [];
   }, [selectedSubject, selectedYear]);
 
-  // 科目・年度が変わったら初期論点を先頭にセット
   useEffect(() => {
     if (availableIssues.length > 0) {
       setSelectedIssue(availableIssues[0]);
@@ -187,16 +141,22 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        let targetProblemId = 'a1111111-1111-1111-1111-111111111111';
+        // セッションに保存された最新問題があれば最優先でロード
         if (typeof window !== 'undefined') {
-          const retryId = sessionStorage.getItem('retry_problem_id');
-          const retryDraft = sessionStorage.getItem('retry_draft');
-          if (retryId) targetProblemId = retryId;
-          if (retryDraft) setDraft(retryDraft);
-          sessionStorage.removeItem('retry_problem_id');
-          sessionStorage.removeItem('retry_draft');
+          const storedProblem = sessionStorage.getItem('current_practice_problem');
+          if (storedProblem) {
+            try {
+              const parsed = JSON.parse(storedProblem);
+              setProblem(parsed);
+              setTimeLeft((parsed.suggested_time_minutes || 70) * 60);
+              setLoading(false);
+              return;
+            } catch (e) {}
+          }
         }
 
+        // なければ Supabase の初期問題をロード
+        let targetProblemId = 'a1111111-1111-1111-1111-111111111111';
         const { data: probData } = await supabase
           .from('sub_problems')
           .select('*')
@@ -206,10 +166,6 @@ export default function PracticePage() {
         if (probData) {
           setProblem(probData);
           setTimeLeft((probData.suggested_time_minutes || 70) * 60);
-        } else {
-          // 初期サンプル問題
-          const defaultProb = generateTargetProblem('民法', '令和5年', '民法94条2項類推適用（他責放置型・善意無過失）', true);
-          setProblem(defaultProb);
         }
 
         const { data: anatData } = await supabase
@@ -261,7 +217,7 @@ export default function PracticePage() {
     setDraft(draft.replaceAll(searchWord, replaceWord));
   };
 
-  // 答案提出 & AI添削
+  // 答案提出 & AI採点
   const handleSubmit = async () => {
     if (!draft.trim()) {
       alert('答案が入力されていません。');
@@ -305,7 +261,7 @@ export default function PracticePage() {
     }
   };
 
-  // ─── 問題作成エンジンの起動（100%確実に選んだ問題へ切り替える） ───
+  // ─── 問題作成エンジンの起動（完全同期版） ───
   const handleRunProblemEngine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -313,83 +269,77 @@ export default function PracticePage() {
 
       const isKaidai = examMode === 'kaidai';
       const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : selectedIssue;
-      const finalIssueTitle = actualIssue || `${selectedSubject}の重要論点`;
+      const targetIssueText = actualIssue || `${selectedSubject}の重要論点`;
 
-      // 1. まず選んだ科目・論点にピンポイント合致する問題を即座に構築
-      let newProblem = generateTargetProblem(selectedSubject, selectedYear, finalIssueTitle, isKaidai);
+      // 1. APIを呼び出して問題データを取得
+      const res = await fetch('/api/generate-problem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: selectedSubject,
+          year: selectedYear,
+          mode: examMode,
+          targetIssue: targetIssueText,
+        }),
+      });
 
-      // 2. Gemini API での高度な問題生成を試行（成功すればさらにリッチな問題文に上書き）
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-        const res = await fetch('/api/generate-problem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject: selectedSubject,
-            year: selectedYear,
-            mode: examMode,
-            targetIssue: finalIssueTitle,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const apiData = await res.json();
-          if (apiData && apiData.fact_context) {
-            newProblem = {
-              id: 'gen-' + Date.now(),
-              subject: selectedSubject,
-              source_exam: apiData.source_exam || newProblem.source_exam,
-              target_issue: apiData.target_issue || finalIssueTitle,
-              suggested_time_minutes: apiData.suggested_time_minutes || 70,
-              fact_context: apiData.fact_context,
-              standard_norm: apiData.standard_norm || newProblem.standard_norm,
-              key_facts: apiData.key_facts || [],
-            };
-          }
-        }
-      } catch (apiErr) {
-        console.warn('API遅延。論点プリセット問題で即座に開始します:', apiErr);
+      const generated = await res.json();
+      if (!generated || !generated.fact_context) {
+        throw new Error('問題データの生成に失敗しました');
       }
 
-      // 3. Supabase に保存（履歴として蓄積）
+      // 2. Supabase に保存
+      let savedProblem: ProblemData = {
+        id: 'p-' + Date.now(),
+        subject: selectedSubject,
+        source_exam: generated.source_exam,
+        target_issue: generated.target_issue,
+        suggested_time_minutes: generated.suggested_time_minutes || 70,
+        fact_context: generated.fact_context,
+        standard_norm: generated.standard_norm || '',
+        key_facts: [],
+      };
+
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('sub_problems')
           .insert({
-            subject: newProblem.subject,
-            source_exam: newProblem.source_exam,
-            target_issue: newProblem.target_issue,
-            suggested_time_minutes: newProblem.suggested_time_minutes,
-            fact_context: newProblem.fact_context,
-            standard_norm: newProblem.standard_norm,
-            key_facts: newProblem.key_facts,
+            subject: savedProblem.subject,
+            source_exam: savedProblem.source_exam,
+            target_issue: savedProblem.target_issue,
+            suggested_time_minutes: savedProblem.suggested_time_minutes,
+            fact_context: savedProblem.fact_context,
+            standard_norm: savedProblem.standard_norm,
+            key_facts: [],
           })
           .select()
           .single();
 
-        if (data) newProblem = data;
+        if (data && !error) {
+          savedProblem = data;
+        }
       } catch (dbErr) {
-        console.warn('Supabase保存スキップ:', dbErr);
+        console.warn('DB保存スキップ（ローカル反映継続）:', dbErr);
       }
 
-      // 4. 画面の状態を確実に更新し、即座に起案を開始！
-      setProblem(newProblem);
+      // 3. セッションストレージに保存（リロードしても新問題が残る）
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('current_practice_problem', JSON.stringify(savedProblem));
+      }
+
+      // 4. 画面の全ステートを新問題に即時切り替え
+      setProblem(savedProblem);
       setAnatomy(null);
-      setTimeLeft((newProblem.suggested_time_minutes || 70) * 60);
+      setTimeLeft((savedProblem.suggested_time_minutes || 70) * 60);
       setDraft('');
-      setActiveTab('problem'); // 問題文タブを確実に開く
-      setIsTimerRunning(true); // タイマーを自動開始
+      setActiveTab('problem');
+      setIsTimerRunning(true);
       setFeedback(null);
       setShowCreateModal(false);
 
-      alert(`【${newProblem.subject}・${newProblem.target_issue}】の問題をセットしました！\nタイマーを開始しました。起案を始めてください。`);
+      alert(`【${savedProblem.subject}・${savedProblem.target_issue}】の新しい問題を作成しました！\nタイマーを開始しました。起案を開始してください。`);
     } catch (err: any) {
-      alert('エンジン起動エラー: ' + (err.message || '予期せぬエラーが発生しました'));
+      alert('作成エラー: ' + (err.message || '問題の作成に失敗しました'));
     } finally {
       setIsGenerating(false);
     }
@@ -988,7 +938,6 @@ export default function PracticePage() {
               zIndex: 10000,
             }}
           >
-            {/* モーダルヘッダー */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '18px' }}>🪄</span>
@@ -1005,10 +954,7 @@ export default function PracticePage() {
               </button>
             </div>
 
-            {/* モーダルフォーム */}
             <form onSubmit={handleRunProblemEngine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              
-              {/* ① 科目 ＆ 出題年度（連動セレクト） */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
@@ -1071,7 +1017,6 @@ export default function PracticePage() {
                 </div>
               </div>
 
-              {/* ② 抽出された出題論点の選択 */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
                   3. 出題論点を選択
@@ -1100,7 +1045,6 @@ export default function PracticePage() {
                   <option value="CUSTOM">✏ 自由入力（別の論点を指定）</option>
                 </select>
 
-                {/* 自由入力欄 */}
                 {selectedIssue === 'CUSTOM' && (
                   <input
                     type="text"
@@ -1121,7 +1065,6 @@ export default function PracticePage() {
                 )}
               </div>
 
-              {/* ③ 出題タイプ（改題 vs 再現） */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '4px' }}>
                   4. 作成モード
@@ -1163,7 +1106,6 @@ export default function PracticePage() {
                 </div>
               </div>
 
-              {/* フッターアクションボタン */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   type="button"
