@@ -609,9 +609,7 @@ export default function PracticePage() {
                   padding: '3px 10px',
                   backgroundColor: '#0284c7',
                   color: '#ffffff',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '4px',
+                  fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px',
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 1px 2px rgba(2,132,199,0.3)',
@@ -638,9 +636,7 @@ export default function PracticePage() {
               onClick={() => setIsTimerRunning(!isTimerRunning)}
               style={{
                 padding: '3px 8px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                borderRadius: '4px',
+                fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px',
                 cursor: 'pointer',
                 backgroundColor: isTimerRunning ? '#fef3c7' : '#dcfce7',
                 color: isTimerRunning ? '#92400e' : '#166534',
@@ -682,9 +678,7 @@ export default function PracticePage() {
                   onClick={() => setFontSize(level)}
                   style={{
                     padding: '2px 7px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    borderRadius: '4px',
+                    fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px',
                     border: isActive ? '1px solid #0284c7' : 'none',
                     backgroundColor: isActive ? '#0284c7' : 'transparent',
                     color: isActive ? '#ffffff' : '#334155',
@@ -957,28 +951,28 @@ export default function PracticePage() {
               <button
                 type="button"
                 onClick={() => setAssistTab('steps')}
-                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'steps' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'steps' ? '#e0f2fe' : '#ffffff', color: assistTab === 'steps' ? '#0369a1' : '#475569' }}
+                style={{ padding: '4px 10px', fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'steps' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'steps' ? '#e0f2fe' : '#ffffff', color: assistTab === 'steps' ? '#0369a1' : '#475569' }}
               >
                 1. 思考手順
               </button>
               <button
                 type="button"
                 onClick={() => setAssistTab('blueprint')}
-                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'blueprint' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'blueprint' ? '#e0f2fe' : '#ffffff', color: assistTab === 'blueprint' ? '#0369a1' : '#475569' }}
+                style={{ padding: '4px 10px', fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'blueprint' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'blueprint' ? '#e0f2fe' : '#ffffff', color: assistTab === 'blueprint' ? '#0369a1' : '#475569' }}
               >
                 2. あてはめ設計図
               </button>
               <button
                 type="button"
                 onClick={() => setAssistTab('anatomy')}
-                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'anatomy' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'anatomy' ? '#e0f2fe' : '#ffffff', color: assistTab === 'anatomy' ? '#0369a1' : '#475569' }}
+                style={{ padding: '4px 10px', fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'anatomy' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'anatomy' ? '#e0f2fe' : '#ffffff', color: assistTab === 'anatomy' ? '#0369a1' : '#475569' }}
               >
                 3. 4色アナトミー
               </button>
               <button
                 type="button"
                 onClick={() => setAssistTab('syllogism')}
-                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'syllogism' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'syllogism' ? '#e0f2fe' : '#ffffff', color: assistTab === 'syllogism' ? '#0369a1' : '#475569' }}
+                style={{ padding: '4px 10px', fontSize: '0.85em', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', border: assistTab === 'syllogism' ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: assistTab === 'syllogism' ? '#e0f2fe' : '#ffffff', color: assistTab === 'syllogism' ? '#0369a1' : '#475569' }}
               >
                 4. 模範答案・三段論法
               </button>
@@ -992,13 +986,13 @@ export default function PracticePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
                 {(anatomy?.thinking_steps || []).map((st) => (
                   <div key={st.step} style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#0284c7', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '0.85em', fontWeight: 'bold', color: '#0284c7', marginBottom: '4px' }}>
                       STEP {st.step}
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#0f172a', marginBottom: '6px' }}>
                       {st.title}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+                    <div style={{ fontSize: '0.95em', color: '#475569', lineHeight: '1.6' }}>
                       {st.description}
                     </div>
                   </div>
@@ -1008,15 +1002,15 @@ export default function PracticePage() {
 
             {assistTab === 'blueprint' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>
+                <div style={{ fontSize: '0.95em', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>
                   問題文の「生の事実（青）」を判例規範の「法的評価（緑）」にぶつける設計図です：
                 </div>
                 {(anatomy?.application_blueprint || []).map((bp, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px' }}>
-                    <div style={{ backgroundColor: '#e0f2fe', padding: '10px', borderRadius: '6px', border: '1px solid #bae6fd', fontSize: '12px', color: '#0369a1' }}>
+                    <div style={{ backgroundColor: '#e0f2fe', padding: '10px', borderRadius: '6px', border: '1px solid #bae6fd', fontSize: '0.95em', lineHeight: '1.6', color: '#0369a1' }}>
                       <strong>【生の事実】</strong><br />{bp.fact}
                     </div>
-                    <div style={{ backgroundColor: '#dcfce7', padding: '10px', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '12px', color: '#166534' }}>
+                    <div style={{ backgroundColor: '#dcfce7', padding: '10px', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '0.95em', lineHeight: '1.6', color: '#166534' }}>
                       <strong>【法的評価・あてはめ】</strong><br />{bp.evaluation}
                     </div>
                   </div>
@@ -1034,7 +1028,15 @@ export default function PracticePage() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: '16px' }}>
-                  <div style={{ fontFamily: 'serif', backgroundColor: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #cbd5e1', lineHeight: '1.8' }}>
+                  <div style={{
+                    fontFamily: 'serif',
+                    backgroundColor: '#f8fafc',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '1em',
+                    lineHeight: fontSizes[fontSize].lh,
+                  }}>
                     {(anatomy?.dissected_segments || []).map((seg, idx) => {
                       const colorMap: any = {
                         requirement: '#dbeafe',
@@ -1078,7 +1080,7 @@ export default function PracticePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>骨格答案（構成案）</h4>
+                    <h4 style={{ margin: 0, fontSize: '1.1em', fontWeight: 'bold', color: '#0f172a' }}>骨格答案（構成案）</h4>
                     <button
                       type="button"
                       onClick={() => setDraft(draft + '\n' + (anatomy?.skeleton_answer || ''))}
@@ -1087,14 +1089,21 @@ export default function PracticePage() {
                       エディタに挿入
                     </button>
                   </div>
-                  <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#334155' }}>
+                  <pre style={{
+                    margin: 0,
+                    fontSize: '1em',
+                    lineHeight: fontSizes[fontSize].lh,
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'serif',
+                    color: '#334155',
+                  }}>
                     {anatomy?.skeleton_answer || '骨格データを読み込み中...'}
                   </pre>
                 </div>
 
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>完全模範答案（写経用）</h4>
+                    <h4 style={{ margin: 0, fontSize: '1.1em', fontWeight: 'bold', color: '#0f172a' }}>完全模範答案（写経用）</h4>
                     <button
                       type="button"
                       onClick={() => setDraft(anatomy?.full_model_answer || '')}
@@ -1103,7 +1112,16 @@ export default function PracticePage() {
                       写経用に丸ごと転記
                     </button>
                   </div>
-                  <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#334155', maxHeight: '240px', overflowY: 'auto' }}>
+                  <pre style={{
+                    margin: 0,
+                    fontSize: '1em',
+                    lineHeight: fontSizes[fontSize].lh,
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'serif',
+                    color: '#334155',
+                    maxHeight: fontSize === 'xl' ? '380px' : fontSize === 'lg' ? '300px' : '240px',
+                    overflowY: 'auto',
+                  }}>
                     {anatomy?.full_model_answer || '模範答案を読み込み中...'}
                   </pre>
                 </div>
