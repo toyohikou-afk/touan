@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const prompt = `あなたは司法試験・予備試験の考査委員・実務家採点者です。
-受験生が作成した以下の起案答案を、答案作成に直結する表現で厳格に採点・添削してください。
+受験生が作成した以下の起案答案を、判例の規範定立、当てはめ基準を入れて答案作成に直結する表現で厳格に採点・添削してください。
 
 【採点基準・着眼点】
 1. 規範定立：条文の趣旨から判例の規範を正確に導き出せているか。
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 3. 三段論法：問題提起→規範定立→あてはめ→結論の骨格が崩れていないか。
 
 【問題の基準規範】
-${standardNorm || '民法94条2項・110条類推適用に関する判例規範'}
+${standardNorm || '判例の規範定立および当てはめ基準'}
 
 【拾うべき生の事実】
 ${keyFacts ? JSON.stringify(keyFacts) : '事実関係'}
@@ -48,11 +48,12 @@ ${userDraft}
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // 1日1500回利用可能で、503も発生しない大本命の安定モデル順
+    // 現行提供中で、1日1500回利用可能なモデルを優先したフォールバック順
     const candidateModels = [
-      'gemini-1.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-pro',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-3.8-flash',
     ];
 
     let feedbackText = '';
@@ -60,6 +61,7 @@ ${userDraft}
 
     for (const modelName of candidateModels) {
       try {
+        console.log(`[evaluate-draft] Attempting: ${modelName}`);
         const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
@@ -67,11 +69,13 @@ ${userDraft}
 
         if (response && response.text) {
           feedbackText = response.text;
+          console.log(`[evaluate-draft] Success with: ${modelName}`);
           break;
         }
       } catch (err: any) {
-        errors.push(`${modelName}: ${err.message || '通信混雑'}`);
-        await new Promise((res) => setTimeout(res, 600));
+        console.warn(`[evaluate-draft] ${modelName} failed:`, err.message);
+        errors.push(`${modelName}: ${err.message || '通信エラー'}`);
+        await new Promise((res) => setTimeout(res, 400));
       }
     }
 
