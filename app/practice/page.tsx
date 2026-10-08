@@ -92,6 +92,82 @@ const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
 };
 
 // ─── 不動産の混入を100%根絶：事実１〜設問まで完全専用問題ビルダー ───
+
+// 🌟 司法試験・予備試験 答案作成直結 合格思考アシスト（1〜4）自動生成エンジン
+function buildDedicatedAnatomy(subject: string, issue: string, problem: ProblemData): AnatomyData {
+  const norm = problem.standard_norm || "判例の規範定立および当てはめ基準";
+  const facts = problem.key_facts && problem.key_facts.length > 0
+    ? problem.key_facts
+    : ["問題文記載の生の事実関係"];
+
+  if (issue.includes("離脱")) {
+    return {
+      pass_reason_summary: "共謀の因果性（物理的・心理的因果性）の完全遮断・解消の有無を、着手前後の段階に応じて精緻に論述する。",
+      statutory_framework: "刑法60条（一部実行全部責任の根拠＝共謀による因果性の寄与）",
+      skeleton_answer: "第１ 甲の罪責\n１ 乙との間の住居侵入・強盗の共謀成立\n２ 勝手口の施錠損壊による実行着手の有無\n３ 逃走行為による「共犯関係からの離脱」の成否\n (1) 規範定立（因果性の遮断・解消）\n (2) あてはめ（着手後、物理的因果性の残存、阻止措置の欠如）\n (3) 結論（離脱不成立、強盗既遂の共同正犯）\n第２ 乙の罪責（強盗既遂罪）",
+      full_model_answer: "第１ 甲の罪責について\n１ 甲が乙と共謀し、V宅に侵入した上、乙がVに暴行を加えて現金を強奪した行為につき、住居侵入罪（刑法130条前段）及び強盗既遂罪（236条）の共同正犯（60条）が成立するか。甲が途中で逃走したことから、共犯関係からの離脱が認められるかが問題となる。\n２ 共同正犯の処罰根拠は、共謀に基づき相互に利用補充し合って犯罪結果に対する因果性を及ぼす点（一部実行全部責任）にある。したがって、共謀関係からの離脱が認められるためには、当初の共謀によって形成された物理的・心理的因果性が完全に遮断・解消されたといえることが必要である。\n具体的には、①離脱の意思表示と他共犯者の了承、②実行の着手時期、③着手後においては自己の関与によって生じた物理的・心理的危険を積極的に除去・阻止したか否かを総合衡量して決すべきである。\n３ これを本件についてみるに、甲はVの出現により動転し「俺はもうやめる」と告げて逃走しているが、乙は了承していない。また、甲自らバールで勝手口を解錠して屋内に侵入しており、既に強盗の密接行為又は住居侵入として実行に着手している。さらに、甲が現場に投げ捨てたバールや侵入路は乙の犯行継続を容易にしており、甲は警察に通報するなどの積極的阻止措置を一切講じていない。したがって、甲の及ぼした物理的因果性は残存している。\n４ よって、共犯関係からの離脱は認められず、甲は強盗罪の既遂結果についても共同正犯としての罪責を負う。\n５ 甲には住居侵入罪及び強盗既遂罪が成立し、両者は牽連犯（54条1項後段）となる。\n第２ 乙の罪責について\n乙には住居侵入罪及び強盗既遂罪が成立し、牽連犯となる。",
+      syllogism_mapping: {
+        major_premise: {
+          issue: "実行着手後の共犯関係からの離脱の成否",
+          purpose: "共同正犯の処罰根拠は相互利用補充による因果性の惹起にある。",
+          norm: "当初の共謀によって生じた物理的・心理的因果性が完全に遮断・解消されたことが必要である。",
+        },
+        minor_premise: {
+          facts: ["甲がバールで施錠をこじ開けて侵入した", "「俺はもうやめる」と告げて逃走", "バールを投げ捨て通報等もせず逃走"],
+          evaluations: ["既に実行着手に至っている", "乙の了承なく心理的因果性は不十分", "バール放置により物理的因果性が残存"],
+        },
+        conclusion: "因果性の遮断が認められず、離脱は不成立（強盗既遂の共同正犯）。",
+      },
+      thinking_steps: [
+        { step: 1, title: "共謀の成立と実行着手の認定", description: "甲乙間で住居侵入・金品強奪の意思連絡があるか、勝手口の解錠侵入で密接行為・着手があるかを画定する。" },
+        { step: 2, title: "処罰根拠からの規範定立", description: "一部実行全部責任の根拠（因果性の惹起）に立ち返り、離脱には因果性の完全遮断・解消が必要との定規を立てる。" },
+        { step: 3, title: "生の事実の峻別とあてはめ", description: "着手時期、意思表示、バール放置、乙の犯行抑止措置の有無という生の事実を規範に照らして法的評価を加える。" },
+        { step: 4, title: "結論と罪数の整理", description: "離脱不成立を導き、住居侵入罪と強盗既遂罪の牽連犯（54条1項後段）を結論付ける。" }
+      ],
+      application_blueprint: [
+        { fact: "甲がバールで勝手口の施錠をこじ開け、屋内に侵入した事実", evaluation: "強盗罪の機会における侵入行為として密接かつ不可欠であり、既に実行着手段階に至っている。" },
+        { fact: "甲が「やばい、俺はもうやめる」と乙に小声で告げて立ち去った事実", evaluation: "一方的な離脱の意思表明にすぎず、乙の了承や犯行抑止に至っておらず心理的因果性を解消していない。" },
+        { fact: "甲がバールを現場に投げ捨て、警察への通報もせず一人逃走した事実", evaluation: "自己の持ち込んだ凶器を残置して犯行を容易にしており、積極的危険除去措置を怠り物理的因果性が残存している。" }
+      ],
+      dissected_segments: [
+        { type: "requirement", text: "甲及び乙の行為につき、住居侵入罪及び強盗既遂罪の共同正犯（刑法60条）が成立するか。甲の逃走により共犯からの離脱が認められるかが問題となる。", annotation: "【条文・論点提起】60条の要件と離脱の論点を端的に提示。" },
+        { type: "purpose", text: "共同正犯の処罰根拠は、共謀に基づく相互利用補充関係により結果に対する因果性を及ぼす点にある。", annotation: "【処罰根拠】一部実行全部責任の根拠を明示。" },
+        { type: "norm", text: "したがって、離脱が認められるためには、共謀によって生じた物理的・心理的因果性が完全に遮断・解消されたといえることを要する。", annotation: "【判例規範定立】答案作成に直結する因果性遮断の基準を定立。" },
+        { type: "application", text: "甲は勝手口を解錠して既に実行に着手しており、バールを現場に残置して逃走したため、乙の強取行為に対する物理的因果性を依然として及ぼしている。", annotation: "【生の事実と評価】解錠・着手・バール残置の事実を拾い規範へあてはめ。" },
+        { type: "conclusion", text: "よって離脱は認められず、甲は強盗既遂罪の共同正犯としての罪責を負う（住居侵入罪と牽連犯）。", annotation: "【結論】罪数まで正確に結ぶ。" }
+      ]
+    };
+  }
+
+  return {
+    pass_reason_summary: "条文上の要件を丁寧に確定し、判例の規範定立から生の事実を漏れなく評価して結論を導く。",
+    statutory_framework: problem.statutes && problem.statutes[0] ? problem.statutes[0].title : "関連条文・解釈",
+    skeleton_answer: "第１ " + issue + "の成否\n１ 条文上の要件の検討\n２ 規範定立（判例の立場）\n３ 事実のあてはめ\n第２ 結論",
+    full_model_answer: "第１ " + issue + "について\n１ 条文の趣旨に照らし、本問の要件充足性を検討する。\n２ " + norm + "\n３ 本件における事実関係を検討するに、" + facts.join("、") + "等の事情が認められる。これらの事情を総合考慮すると、要件を充足すると解する。\n４ よって、結論に至る。",
+    syllogism_mapping: {
+      major_premise: { issue: issue, norm: norm },
+      minor_premise: { facts: facts, evaluations: ["要件に該当する"] },
+      conclusion: "結論を肯定（又は否定）する。"
+    },
+    thinking_steps: [
+      { step: 1, title: "問題提起と条文要件の摘示", description: "条文番号を明記し、条文文言の解釈が必要となる理由を示す。" },
+      { step: 2, title: "趣旨に基づく規範定立", description: "条文趣旨・保護法益から判例の確立した規範（定規）を正確に定立する。" },
+      { step: 3, title: "生の事実の抽出と法的評価", description: "問題文の具体的な事実を過不足なく拾い上げ、規範の要素に当てはめる。" },
+      { step: 4, title: "論理的結論の導出", description: "当てはめの結果から要件該当性を論断し、罪責・効果を確定する。" }
+    ],
+    application_blueprint: facts.slice(0, 3).map((f) => ({
+      fact: f,
+      evaluation: "規範の判断要素に合致し、法的評価を基礎づける重要な事実である。"
+    })),
+    dissected_segments: [
+      { type: "requirement", text: issue + "の成否について検討する。", annotation: "【問題提起】" },
+      { type: "norm", text: norm, annotation: "【判例規範定立】" },
+      { type: "application", text: facts.join("。"), annotation: "【事実のあてはめ】" },
+      { type: "conclusion", text: "以上の検討より、結論に至る。", annotation: "【結論】" }
+    ]
+  };
+}
+
 function buildDedicatedProblem(subject: string, year: string, issue: string, isKaidai: boolean): ProblemData {
   const sourceExam = `${year} 予備試験${isKaidai ? '改題' : ''}`;
   let factContext = '';
@@ -262,15 +338,49 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        // 過去の古いキャッシュを完全破棄
+        // 🌟 1. 再起案（再答案作成）データの引き継ぎチェック
+        let retryDraft = '';
+        let retryProbId = '';
         if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('current_practice_problem');
+          retryDraft = sessionStorage.getItem('retry_draft') || '';
+          retryProbId = sessionStorage.getItem('retry_problem_id') || '';
         }
 
-        // 初期問題として「刑法・共犯関係からの離脱」を100%専用問題でセット
-        const initialProb = buildDedicatedProblem('刑法', '令和6年', '共犯関係からの離脱', true);
-        setProblem(initialProb);
-        setTimeLeft(70 * 60);
+        if (retryDraft) {
+          setDraft(retryDraft);
+        }
+
+        let loadedProb: ProblemData | null = null;
+        if (retryProbId) {
+          const { data: dbProb } = await supabase
+            .from('sub_problems')
+            .select('*')
+            .eq('id', retryProbId)
+            .single();
+
+          if (dbProb) {
+            loadedProb = {
+              id: dbProb.id,
+              subject: dbProb.subject || '刑法',
+              source_exam: dbProb.source_exam || '予備試験',
+              target_issue: dbProb.target_issue || '論点',
+              fact_context: dbProb.fact_context || '',
+              standard_norm: dbProb.standard_norm || '',
+              key_facts: dbProb.key_facts || [],
+              suggested_time_minutes: dbProb.suggested_time_minutes || 70,
+            };
+          }
+        }
+
+        // 🌟 2. 問題の確定（再起案問題 or デフォルト刑法専用問題）
+        const targetProb = loadedProb || buildDedicatedProblem('刑法', '令和6年', '共犯関係からの離脱', true);
+        setProblem(targetProb);
+        setTimeLeft((targetProb.suggested_time_minutes || 70) * 60);
+
+        // 🌟 3. 合格思考アシスト（1〜4）を確実にセット
+        const assistData = buildDedicatedAnatomy(targetProb.subject, targetProb.target_issue, targetProb);
+        setAnatomy(assistData);
+        setShowAssist(true);
       } catch (err) {
         console.error('データ取得失敗:', err);
       } finally {
@@ -437,7 +547,8 @@ export default function PracticePage() {
 
       // 画面の全ステートを新問題に即時切り替え
       setProblem(newProblem);
-      setAnatomy(null);
+      setAnatomy(buildDedicatedAnatomy(newProblem.subject, newProblem.target_issue, newProblem));
+      setShowAssist(true);
       setTimeLeft((newProblem.suggested_time_minutes || 70) * 60);
       setDraft('');
       setActiveTab('problem');
