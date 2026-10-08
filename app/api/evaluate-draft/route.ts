@@ -48,33 +48,38 @@ ${userDraft}
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // gemini-3.8-flash 単一で最大3回リトライ（一時混雑503対策）
+    // 混雑（503）対策：メインモデルが過負荷の際は別モデルへ自動フォールバック
+    const candidateModels = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-3.8-flash',
+    ];
+
     let feedbackText = '';
     let lastError: any = null;
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (const modelName of candidateModels) {
       try {
+        console.log(`Trying model: ${modelName}`);
         const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: modelName,
           contents: prompt,
         });
 
-        if (response.text) {
+        if (response && response.text) {
           feedbackText = response.text;
-          break;
+          break; // 成功した時点でループを抜ける
         }
       } catch (err: any) {
         lastError = err;
-        console.warn(`Gemini 3.8 Flash attempt ${attempt} failed:`, err.message);
-        if (attempt < 3) {
-          // 混雑時は1.5秒待機して再試行
-          await new Promise((res) => setTimeout(res, 1500));
-        }
+        console.warn(`Model ${modelName} failed (status: ${err.status || err.code}): ${err.message}`);
+        // わずかに待機して次の代替モデルへ移行
+        await new Promise((res) => setTimeout(res, 800));
       }
     }
 
     if (!feedbackText) {
-      throw lastError || new Error('採点生成に失敗しました。');
+      throw lastError || new Error('すべての採点モデルで過負荷または通信エラーが発生しました。');
     }
 
     return NextResponse.json({ feedback: feedbackText });
