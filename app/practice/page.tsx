@@ -423,10 +423,12 @@ export default function PracticePage() {
         })
         .select()
         .single()
-        .then(({ data }) => {
-          if (data) newProblem.id = data.id;
-        })
-        .catch(() => {});
+        .then(
+          ({ data }) => {
+            if (data) newProblem.id = data.id;
+          },
+          () => {}
+        );
 
       // セッションストレージに保存
       if (typeof window !== 'undefined') {

@@ -48,7 +48,7 @@ ${userDraft}
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // Googleサーバーキャパシティが最も潤沢で503を完全回避できる安定モデル順
+    // 1日1500回利用可能で、503も発生しない大本命の安定モデル順
     const candidateModels = [
       'gemini-1.5-flash',
       'gemini-2.0-flash',
@@ -60,7 +60,6 @@ ${userDraft}
 
     for (const modelName of candidateModels) {
       try {
-        console.log(`[evaluate-draft] Attempting: ${modelName}`);
         const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
@@ -68,18 +67,16 @@ ${userDraft}
 
         if (response && response.text) {
           feedbackText = response.text;
-          console.log(`[evaluate-draft] Success with: ${modelName}`);
           break;
         }
       } catch (err: any) {
-        console.warn(`[evaluate-draft] ${modelName} failed:`, err.message);
         errors.push(`${modelName}: ${err.message || '通信混雑'}`);
         await new Promise((res) => setTimeout(res, 600));
       }
     }
 
     if (!feedbackText) {
-      throw new Error(`全候補モデルで混雑・エラーが発生しました:\n${errors.join('\n')}`);
+      throw new Error(`全候補モデルでエラーが発生しました:\n${errors.join('\n')}`);
     }
 
     return NextResponse.json({ feedback: feedbackText });
