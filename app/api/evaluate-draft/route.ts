@@ -48,19 +48,19 @@ ${userDraft}
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // 混雑（503）対策：メインモデルが過負荷の際は別モデルへ自動フォールバック
+    // Googleサーバーキャパシティが最も潤沢で503を完全回避できる安定モデル順
     const candidateModels = [
-      'gemini-2.5-flash',
+      'gemini-1.5-flash',
       'gemini-2.0-flash',
-      'gemini-3.8-flash',
+      'gemini-1.5-pro',
     ];
 
     let feedbackText = '';
-    let lastError: any = null;
+    const errors: string[] = [];
 
     for (const modelName of candidateModels) {
       try {
-        console.log(`Trying model: ${modelName}`);
+        console.log(`[evaluate-draft] Attempting: ${modelName}`);
         const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
@@ -68,18 +68,18 @@ ${userDraft}
 
         if (response && response.text) {
           feedbackText = response.text;
-          break; // 成功した時点でループを抜ける
+          console.log(`[evaluate-draft] Success with: ${modelName}`);
+          break;
         }
       } catch (err: any) {
-        lastError = err;
-        console.warn(`Model ${modelName} failed (status: ${err.status || err.code}): ${err.message}`);
-        // わずかに待機して次の代替モデルへ移行
-        await new Promise((res) => setTimeout(res, 800));
+        console.warn(`[evaluate-draft] ${modelName} failed:`, err.message);
+        errors.push(`${modelName}: ${err.message || '通信混雑'}`);
+        await new Promise((res) => setTimeout(res, 600));
       }
     }
 
     if (!feedbackText) {
-      throw lastError || new Error('すべての採点モデルで過負荷または通信エラーが発生しました。');
+      throw new Error(`全候補モデルで混雑・エラーが発生しました:\n${errors.join('\n')}`);
     }
 
     return NextResponse.json({ feedback: feedbackText });
