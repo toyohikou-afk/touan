@@ -340,14 +340,55 @@ export default function PracticePage() {
       const aiComment = resJson.feedback || '採点が完了しました。';
       setFeedback(aiComment);
 
-      await supabase.from('submissions').insert({
-        problem_id: problem?.id,
+      // 🌟 sub_problems 親レコードの自動作成・UUID解決（外部キー制約回避）
+      let targetProblemId = problem?.id;
+      if (!targetProblemId || targetProblemId.startsWith("prob-")) {
+        const { data: newProb, error: probErr } = await supabase
+          .from("sub_problems")
+          .insert({
+            subject: problem?.subject || "刑法",
+            source_exam: problem?.source_exam || "予備試験",
+            target_issue: problem?.target_issue || "論点",
+            fact_context: problem?.fact_context || "",
+            standard_norm: problem?.standard_norm || "",
+            key_facts: problem?.key_facts || [],
+            suggested_time_minutes: problem?.suggested_time_minutes || 70,
+            problem_type: "dedicated",
+          })
+          .select("id")
+          .single();
+
+        if (!probErr && newProb?.id) {
+          targetProblemId = newProb.id;
+          setProblem((prev) => (prev ? { ...prev, id: newProb.id } : null));
+        } else {
+          console.warn("sub_problems 自動作成警告:", probErr);
+        }
+      }
+
+      // 🌟 submissions テーブルへ起案答案・AI講評を確実に保存
+      const insertPayload: any = {
         user_draft: draft,
         time_spent_seconds: Math.max(0, ((problem?.suggested_time_minutes || 70) * 60) - timeLeft),
         ai_feedback: aiComment,
-      });
+      };
 
-      alert('答案の提出とAI採点が完了し、ダッシュボードに保存されました！');
+      if (targetProblemId && !targetProblemId.startsWith("prob-")) {
+        insertPayload.problem_id = targetProblemId;
+      }
+
+      const { data: insertedSub, error: insertError } = await supabase
+        .from("submissions")
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("submissions 保存エラー:", insertError);
+        alert("【DB保存エラー】採点は完了しましたが履歴保存に失敗しました:\n" + insertError.message);
+      } else {
+        alert("答案の提出とAI採点が完了し、ダッシュボードに正常保存されました！");
+      }
     } catch (e: any) {
       alert('採点エラー: ' + e.message);
     } finally {
