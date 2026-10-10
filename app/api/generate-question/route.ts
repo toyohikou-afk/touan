@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 
+// 優先順位順のモデルリスト（ピーク時フォールバック用）
+const FALLBACK_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3.8-pro',
+  'gemini-2.5-flash',
+];
+
 export async function POST(req: Request) {
   try {
     const { subject, year, mode, targetIssue } = await req.json();
@@ -45,31 +52,41 @@ export async function POST(req: Request) {
 }
 `;
 
-    // 🌟 安定して稼働する最新モデル gemini-2.0-flash を直接コール
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    let lastErrorText = '';
 
-    const geminiRes = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: 'application/json' },
-      }),
-    });
+    // 🌟 ピーク時対策：モデル順次フォールバックループ
+    for (const modelName of FALLBACK_MODELS) {
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API エラー: ${errText}`);
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { response_mime_type: 'application/json' },
+          }),
+        });
+
+        if (res.ok) {
+          const resJson = await res.json();
+          const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const parsed = JSON.parse(rawText);
+            return NextResponse.json(parsed);
+          }
+        } else {
+          lastErrorText = await res.text();
+          console.warn(`モデル ${modelName} が失敗（ステータス: ${res.status}）。次のモデルへフォールバックします...`);
+        }
+      } catch (err: any) {
+        lastErrorText = err.message;
+        console.warn(`モデル ${modelName} 呼び出し中に例外発生。次を試行します。`);
+      }
     }
 
-    const resJson = await geminiRes.json();
-    const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error('AIからの応答テキストが空でした。');
-    }
-
-    const parsed = JSON.parse(rawText);
-    return NextResponse.json(parsed);
+    // 全モデルが失敗した場合のみエラーを返す
+    throw new Error(`全モデルでの生成が失敗しました: ${lastErrorText}`);
   } catch (err: any) {
     console.error('作問APIエラー:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
