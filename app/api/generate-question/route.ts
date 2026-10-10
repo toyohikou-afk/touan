@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY が設定されていません。' },
+        { error: 'GEMINI_API_KEY が環境変数に設定されていません。' },
         { status: 500 }
       );
     }
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 【絶対遵守の作問ルール（キメラ・不整合の完全排除）】
 1. 事実関係（各段落）と設問の指示は100%整合させてください。
    - 事実文に存在しない罪名・争点（例：事実は侵入窃盗なのに「詐欺罪」や「不法原因給付」を問う等）を設問で指定することは厳禁です。
-   - 逆に、設問で論述を求める論点（${issueName}）については、必ず事実関係の中にあてはめの根拠となる具体的言動・客観的事実（日時、場所、当事者の認識、損害額等）を記載してください。
+   - 設問で論述を求める論点（${issueName}）については、必ず事実関係の中にあてはめの根拠となる具体的言動・客観的事実（日時、場所、当事者の認識、損害額等）を記載してください。
 2. fact_context は、時系列に沿った段落（１、２、３...）で生の事実を記述し、最終段落に【設問】を配置してください。
 3. 答案作成に直結する表現で、判例の規範定立および当てはめ基準（考慮要素）を明示してください。
 
@@ -45,7 +45,9 @@ export async function POST(req: Request) {
 }
 `;
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // 🌟 安定して動作する Gemini 2.0 Flash / 最新エンドポイント
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
     const geminiRes = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,8 +58,26 @@ export async function POST(req: Request) {
     });
 
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API エラー: ${errText}`);
+      // gemini-2.0-flash が万一通らない場合のフォールバック試行 (gemini-1.5-flash-latest)
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+      const fallbackRes = await fetch(fallbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { response_mime_type: 'application/json' },
+        }),
+      });
+
+      if (!fallbackRes.ok) {
+        const errText = await fallbackRes.text();
+        throw new Error(`Gemini API エラー: ${errText}`);
+      }
+
+      const resJson = await fallbackRes.json();
+      const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error('AIからの応答テキストが空でした。');
+      return NextResponse.json(JSON.parse(rawText));
     }
 
     const resJson = await geminiRes.json();
