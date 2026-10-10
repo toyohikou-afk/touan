@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 
+// ピーク時に順次切り替える稼働中モデル
+const CANDIDATE_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3.8-pro',
+];
+
 export async function POST(req: Request) {
   try {
     const { subject, year, mode, targetIssue } = await req.json();
@@ -14,7 +20,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🌟 キメラデータを引き直さないよう、DBキャッシュ参照を外して確実にGeminiで論点直結の完全新作を生成
     const prompt = `
 あなたは日本の司法試験および予備試験の論文式試験考査委員です。
 以下の指定条件に基づき、70分間の本番起案にふさわしい、事実関係と設問が100%整合した完全オリジナルの事例問題を作成してください。
@@ -25,7 +30,7 @@ export async function POST(req: Request) {
 - 出題論点: 【${issueName}】
 - 出題形式: ${isKaidai ? '司法試験・予備試験の過去問をベースに、事実関係や過失・共犯関係を改変した実戦改題' : '本試験の出題傾向に即した過去問再現問題'}
 
-【絶対厳守の作問ルール（過去の定型文・キメラの完全排除）】
+【絶対厳守の作問ルール】
 1. 事実関係の全段落（１、２、３...）は、必ず指定論点【${issueName}】を検討・論証するために必要な生の事実のみで構成してください。
    ※「店舗侵入・金庫から現金を窃盗」といった無関係な定型文は絶対に書かないでください。
    論点が放火罪であれば放火・火災に至る具体的な行為や延焼の経過を、不能犯であれば対象の性状や用いた手段の危険性を、詐欺罪であれば欺罔行為と交付行為を、事実関係の中に時系列で克明に記述してください。
@@ -45,30 +50,40 @@ export async function POST(req: Request) {
 }
 `;
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    let lastErrorMessage = '';
 
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: 'application/json' },
-      }),
-    });
+    // 🌟 503混雑時やエラー発生時に順次フォールバック
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gemini API エラー (${res.status}): ${errText}`);
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { response_mime_type: 'application/json' },
+          }),
+        });
+
+        if (res.ok) {
+          const resJson = await res.json();
+          const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const parsed = JSON.parse(rawText);
+            return NextResponse.json(parsed);
+          }
+        } else {
+          const errText = await res.text();
+          lastErrorMessage = `[${model}] ${res.status}: ${errText}`;
+          console.warn(`モデル ${model} が混雑またはエラー。次のモデルに切り替えます。`);
+        }
+      } catch (loopErr: any) {
+        lastErrorMessage = `[${model}] 通信例外: ${loopErr.message}`;
+      }
     }
 
-    const resJson = await res.json();
-    const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error('AIからの応答テキストが空でした。');
-    }
-
-    const parsed = JSON.parse(rawText);
-    return NextResponse.json(parsed);
+    throw new Error(`全モデルが混雑中またはエラーです: ${lastErrorMessage}`);
   } catch (err: any) {
     console.error('作問APIエラー:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
