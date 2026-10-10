@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// 優先順位順のモデルリスト（ピーク時フォールバック用）
+// 有効なモデルのみに限定
 const FALLBACK_MODELS = [
   'gemini-3.8-flash',
   'gemini-3.8-pro',
-  'gemini-2.5-flash',
 ];
 
 export async function POST(req: Request) {
@@ -13,8 +13,41 @@ export async function POST(req: Request) {
     const isKaidai = mode === 'kaidai';
     const issueName = targetIssue || `${subject || '刑法'}の最重要論点`;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+    // 🌟 1. 先にSupabaseのストック（事前バッチ生成分）を確認
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const { data: stockProb } = await supabase
+          .from('sub_problems')
+          .select('*')
+          .eq('subject', subject)
+          .eq('target_issue', issueName)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (stockProb && stockProb.fact_context) {
+          console.log(`⚡ Supabaseキャッシュから即時返却: ${issueName}`);
+          return NextResponse.json({
+            id: stockProb.id,
+            source_exam: stockProb.source_exam || `${year} 予備試験`,
+            target_issue: stockProb.target_issue,
+            suggested_time_minutes: stockProb.suggested_time_minutes || 70,
+            fact_context: stockProb.fact_context,
+            standard_norm: stockProb.standard_norm,
+            statutes: stockProb.statutes || [],
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Supabaseキャッシュ検索スキップ:', dbErr);
+      }
+    }
+
+    // 🌟 2. DBにストックがない場合のみGeminiで新規生成
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'GEMINI_API_KEY が設定されていません。' },
@@ -32,14 +65,13 @@ export async function POST(req: Request) {
 - 指定論点: ${issueName}
 - 出題形式: ${isKaidai ? '基本構造を踏まえつつ、当事者の過失や関与度などの事実関係を改変した改題' : '本試験過去問の典型事例に即した出題'}
 
-【絶対遵守の作問ルール（キメラ・不整合の完全排除）】
+【絶対遵守の作問ルール】
 1. 事実関係（各段落）と設問の指示は100%整合させてください。
-   - 事実文に存在しない罪名・争点（例：事実は侵入窃盗なのに「詐欺罪」や「不法原因給付」を問う等）を設問で指定することは厳禁です。
-   - 設問で論述を求める論点（${issueName}）については、必ず事実関係の中にあてはめの根拠となる具体的言動・客観的事実（日時、場所、当事者の認識、損害額等）を記載してください。
+   - 設問で論述を求める論点（${issueName}）については、必ず事実関係の中にあてはめの根拠となる具体的言動・客観的事実を記載してください。
 2. fact_context は、時系列に沿った段落（１、２、３...）で生の事実を記述し、最終段落に【設問】を配置してください。
-3. 答案作成に直結する表現で、判例の規範定立および当てはめ基準（考慮要素）を明示してください。
+3. 答案作成に直結する表現で、判例の規範定立および当てはめ基準を明示してください。
 
-必ず以下のJSONフォーマットのみを出力してください（Markdownのバッククォート等は含めないでください）。
+必ず以下のJSONフォーマットのみを出力してください。
 {
   "source_exam": "${year} 予備試験${isKaidai ? '改題' : ''}",
   "target_issue": "${issueName}",
@@ -54,7 +86,6 @@ export async function POST(req: Request) {
 
     let lastErrorText = '';
 
-    // 🌟 ピーク時対策：モデル順次フォールバックループ
     for (const modelName of FALLBACK_MODELS) {
       try {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -77,16 +108,14 @@ export async function POST(req: Request) {
           }
         } else {
           lastErrorText = await res.text();
-          console.warn(`モデル ${modelName} が失敗（ステータス: ${res.status}）。次のモデルへフォールバックします...`);
+          console.warn(`モデル ${modelName} 失敗: ${res.status}`);
         }
       } catch (err: any) {
         lastErrorText = err.message;
-        console.warn(`モデル ${modelName} 呼び出し中に例外発生。次を試行します。`);
       }
     }
 
-    // 全モデルが失敗した場合のみエラーを返す
-    throw new Error(`全モデルでの生成が失敗しました: ${lastErrorText}`);
+    throw new Error(`生成失敗: ${lastErrorText}`);
   } catch (err: any) {
     console.error('作問APIエラー:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
