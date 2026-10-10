@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY が環境変数に設定されていません。' },
+        { error: 'GEMINI_API_KEY が設定されていません。' },
         { status: 500 }
       );
     }
@@ -32,20 +32,20 @@ export async function POST(req: Request) {
 2. fact_context は、時系列に沿った段落（１、２、３...）で生の事実を記述し、最終段落に【設問】を配置してください。
 3. 答案作成に直結する表現で、判例の規範定立および当てはめ基準（考慮要素）を明示してください。
 
-必ず以下のJSONフォーマットのみを出力してください（Markdownのバッククォート \`\`\`json 等は含めないでください）。
+必ず以下のJSONフォーマットのみを出力してください（Markdownのバッククォート等は含めないでください）。
 {
   "source_exam": "${year} 予備試験${isKaidai ? '改題' : ''}",
   "target_issue": "${issueName}",
   "suggested_time_minutes": 70,
-  "fact_context": "１ （犯意・共謀・計画等の事実関係）\\n２ （実行行為・客観的経緯等の事実関係）\\n３ （結果発生・事後処理等の事実関係）\\n\\n【設問】\\n各当事者の罪責（または法的請求）について、上記事実関係に現れた行為に直結する論点（${issueName}）を対象として論ぜよ。",
+  "fact_context": "１ （犯意・共謀等の事実関係）\\n２ （実行行為等の事実関係）\\n３ （結果発生等の事実関係）\\n\\n【設問】\\n各当事者の罪責について、上記事実関係に現れた行為に直結する論点（${issueName}）を対象として論ぜよ。",
   "standard_norm": "【判例規範定立】...\\n【当てはめ基準】...",
   "statutes": [
-    { "title": "関連条文名", "text": "条文テキスト" }
+    { "title": "関連条文名", "text": "条文内容" }
   ]
 }
 `;
 
-    // 🌟 安定して動作する Gemini 2.0 Flash / 最新エンドポイント
+    // 🌟 安定して稼働する最新モデル gemini-2.0-flash を直接コール
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const geminiRes = await fetch(apiUrl, {
@@ -58,26 +58,8 @@ export async function POST(req: Request) {
     });
 
     if (!geminiRes.ok) {
-      // gemini-2.0-flash が万一通らない場合のフォールバック試行 (gemini-1.5-flash-latest)
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-      const fallbackRes = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { response_mime_type: 'application/json' },
-        }),
-      });
-
-      if (!fallbackRes.ok) {
-        const errText = await fallbackRes.text();
-        throw new Error(`Gemini API エラー: ${errText}`);
-      }
-
-      const resJson = await fallbackRes.json();
-      const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) throw new Error('AIからの応答テキストが空でした。');
-      return NextResponse.json(JSON.parse(rawText));
+      const errText = await geminiRes.text();
+      throw new Error(`Gemini API エラー: ${errText}`);
     }
 
     const resJson = await geminiRes.json();
