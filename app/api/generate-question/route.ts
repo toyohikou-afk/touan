@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// 有効なモデルのみに限定
-const FALLBACK_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.8-pro',
-];
-
 export async function POST(req: Request) {
   try {
     const { subject, year, mode, targetIssue } = await req.json();
@@ -16,7 +10,7 @@ export async function POST(req: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // 🌟 1. 先にSupabaseのストック（事前バッチ生成分）を確認
+    // 🌟 1. Supabaseの事前ストック（バッチ生成分）があれば0秒即時返却
     if (supabaseUrl && supabaseKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -42,11 +36,11 @@ export async function POST(req: Request) {
           });
         }
       } catch (dbErr) {
-        console.warn('Supabaseキャッシュ検索スキップ:', dbErr);
+        console.warn('DBストック取得スキップ:', dbErr);
       }
     }
 
-    // 🌟 2. DBにストックがない場合のみGeminiで新規生成
+    // 🌟 2. バッチで動作確認済みの gemini-3.8-flash のみを直叩き
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -71,7 +65,7 @@ export async function POST(req: Request) {
 2. fact_context は、時系列に沿った段落（１、２、３...）で生の事実を記述し、最終段落に【設問】を配置してください。
 3. 答案作成に直結する表現で、判例の規範定立および当てはめ基準を明示してください。
 
-必ず以下のJSONフォーマットのみを出力してください。
+必ず以下のJSONフォーマットのみを出力してください（Markdownのバッククォート等は含めないでください）。
 {
   "source_exam": "${year} 予備試験${isKaidai ? '改題' : ''}",
   "target_issue": "${issueName}",
@@ -84,38 +78,30 @@ export async function POST(req: Request) {
 }
 `;
 
-    let lastErrorText = '';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
-    for (const modelName of FALLBACK_MODELS) {
-      try {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { response_mime_type: 'application/json' },
+      }),
+    });
 
-        const res = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json' },
-          }),
-        });
-
-        if (res.ok) {
-          const resJson = await res.json();
-          const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) {
-            const parsed = JSON.parse(rawText);
-            return NextResponse.json(parsed);
-          }
-        } else {
-          lastErrorText = await res.text();
-          console.warn(`モデル ${modelName} 失敗: ${res.status}`);
-        }
-      } catch (err: any) {
-        lastErrorText = err.message;
-      }
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini API エラー (${res.status}): ${errText}`);
     }
 
-    throw new Error(`生成失敗: ${lastErrorText}`);
+    const resJson = await res.json();
+    const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      throw new Error('AIからの応答テキストが空でした。');
+    }
+
+    const parsed = JSON.parse(rawText);
+    return NextResponse.json(parsed);
   } catch (err: any) {
     console.error('作問APIエラー:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
