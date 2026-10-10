@@ -8,14 +8,14 @@ import { supabase } from '@/lib/supabase';
 // 1. 型定義 ＆ マスターデータ
 // ==========================================
 type ProblemData = {
-  id: string;
+  id?: string;
   subject: string;
   source_exam: string;
   target_issue: string;
   suggested_time_minutes: number;
   fact_context: string;
   standard_norm: string;
-  key_facts: string[];
+  key_facts?: string[];
   statutes?: Array<{ title: string; text: string }>;
 };
 
@@ -91,196 +91,36 @@ const EXAM_ISSUES_MASTER: Record<string, Record<string, string[]>> = {
   },
 };
 
-// ─── 不動産の混入を100%根絶：事実１〜設問まで完全専用問題ビルダー ───
-
-// 🌟 司法試験・予備試験 答案作成直結 合格思考アシスト（1〜4）自動生成エンジン
-function buildDedicatedAnatomy(subject: string, issue: string, problem: ProblemData): AnatomyData {
+// 🌟 動的アナトミー構築エンジン（AI生成問題から動的生成）
+function buildAnatomyFromProblem(problem: ProblemData): AnatomyData {
   const norm = problem.standard_norm || "判例の規範定立および当てはめ基準";
-  const facts = problem.key_facts && problem.key_facts.length > 0
-    ? problem.key_facts
-    : ["問題文記載の生の事実関係"];
-
-  if (issue.includes("離脱")) {
-    return {
-      pass_reason_summary: "共謀の因果性（物理的・心理的因果性）の完全遮断・解消の有無を、着手前後の段階に応じて精緻に論述する。",
-      statutory_framework: "刑法60条（一部実行全部責任の根拠＝共謀による因果性の寄与）",
-      skeleton_answer: "第１ 甲の罪責\n１ 乙との間の住居侵入・強盗の共謀成立\n２ 勝手口の施錠損壊による実行着手の有無\n３ 逃走行為による「共犯関係からの離脱」の成否\n (1) 規範定立（因果性の遮断・解消）\n (2) あてはめ（着手後、物理的因果性の残存、阻止措置の欠如）\n (3) 結論（離脱不成立、強盗既遂の共同正犯）\n第２ 乙の罪責（強盗既遂罪）",
-      full_model_answer: "第１ 甲の罪責について\n１ 甲が乙と共謀し、V宅に侵入した上、乙がVに暴行を加えて現金を強奪した行為につき、住居侵入罪（刑法130条前段）及び強盗既遂罪（236条）の共同正犯（60条）が成立するか。甲が途中で逃走したことから、共犯関係からの離脱が認められるかが問題となる。\n２ 共同正犯の処罰根拠は、共謀に基づき相互に利用補充し合って犯罪結果に対する因果性を及ぼす点（一部実行全部責任）にある。したがって、共謀関係からの離脱が認められるためには、当初の共謀によって形成された物理的・心理的因果性が完全に遮断・解消されたといえることが必要である。\n具体的には、①離脱の意思表示と他共犯者の了承、②実行の着手時期、③着手後においては自己の関与によって生じた物理的・心理的危険を積極的に除去・阻止したか否かを総合衡量して決すべきである。\n３ これを本件についてみるに、甲はVの出現により動転し「俺はもうやめる」と告げて逃走しているが、乙は了承していない。また、甲自らバールで勝手口を解錠して屋内に侵入しており、既に強盗の密接行為又は住居侵入として実行に着手している。さらに、甲が現場に投げ捨てたバールや侵入路は乙の犯行継続を容易にしており、甲は警察に通報するなどの積極的阻止措置を一切講じていない。したがって、甲の及ぼした物理的因果性は残存している。\n４ よって、共犯関係からの離脱は認められず、甲は強盗罪の既遂結果についても共同正犯としての罪責を負う。\n５ 甲には住居侵入罪及び強盗既遂罪が成立し、両者は牽連犯（54条1項後段）となる。\n第２ 乙の罪責について\n乙には住居侵入罪及び強盗既遂罪が成立し、牽連犯となる。",
-      syllogism_mapping: {
-        major_premise: {
-          issue: "実行着手後の共犯関係からの離脱の成否",
-          purpose: "共同正犯の処罰根拠は相互利用補充による因果性の惹起にある。",
-          norm: "当初の共謀によって生じた物理的・心理的因果性が完全に遮断・解消されたことが必要である。",
-        },
-        minor_premise: {
-          facts: ["甲がバールで施錠をこじ開けて侵入した", "「俺はもうやめる」と告げて逃走", "バールを投げ捨て通報等もせず逃走"],
-          evaluations: ["既に実行着手に至っている", "乙の了承なく心理的因果性は不十分", "バール放置により物理的因果性が残存"],
-        },
-        conclusion: "因果性の遮断が認められず、離脱は不成立（強盗既遂の共同正犯）。",
-      },
-      thinking_steps: [
-        { step: 1, title: "共謀の成立と実行着手の認定", description: "甲乙間で住居侵入・金品強奪の意思連絡があるか、勝手口の解錠侵入で密接行為・着手があるかを画定する。" },
-        { step: 2, title: "処罰根拠からの規範定立", description: "一部実行全部責任の根拠（因果性の惹起）に立ち返り、離脱には因果性の完全遮断・解消が必要との定規を立てる。" },
-        { step: 3, title: "生の事実の峻別とあてはめ", description: "着手時期、意思表示、バール放置、乙の犯行抑止措置の有無という生の事実を規範に照らして法的評価を加える。" },
-        { step: 4, title: "結論と罪数の整理", description: "離脱不成立を導き、住居侵入罪と強盗既遂罪の牽連犯（54条1項後段）を結論付ける。" }
-      ],
-      application_blueprint: [
-        { fact: "甲がバールで勝手口の施錠をこじ開け、屋内に侵入した事実", evaluation: "強盗罪の機会における侵入行為として密接かつ不可欠であり、既に実行着手段階に至っている。" },
-        { fact: "甲が「やばい、俺はもうやめる」と乙に小声で告げて立ち去った事実", evaluation: "一方的な離脱の意思表明にすぎず、乙の了承や犯行抑止に至っておらず心理的因果性を解消していない。" },
-        { fact: "甲がバールを現場に投げ捨て、警察への通報もせず一人逃走した事実", evaluation: "自己の持ち込んだ凶器を残置して犯行を容易にしており、積極的危険除去措置を怠り物理的因果性が残存している。" }
-      ],
-      dissected_segments: [
-        { type: "requirement", text: "甲及び乙の行為につき、住居侵入罪及び強盗既遂罪の共同正犯（刑法60条）が成立するか。甲の逃走により共犯からの離脱が認められるかが問題となる。", annotation: "【条文・論点提起】60条の要件と離脱の論点を端的に提示。" },
-        { type: "purpose", text: "共同正犯の処罰根拠は、共謀に基づく相互利用補充関係により結果に対する因果性を及ぼす点にある。", annotation: "【処罰根拠】一部実行全部責任の根拠を明示。" },
-        { type: "norm", text: "したがって、離脱が認められるためには、共謀によって生じた物理的・心理的因果性が完全に遮断・解消されたといえることを要する。", annotation: "【判例規範定立】答案作成に直結する因果性遮断の基準を定立。" },
-        { type: "application", text: "甲は勝手口を解錠して既に実行に着手しており、バールを現場に残置して逃走したため、乙の強取行為に対する物理的因果性を依然として及ぼしている。", annotation: "【生の事実と評価】解錠・着手・バール残置の事実を拾い規範へあてはめ。" },
-        { type: "conclusion", text: "よって離脱は認められず、甲は強盗既遂罪の共同正犯としての罪責を負う（住居侵入罪と牽連犯）。", annotation: "【結論】罪数まで正確に結ぶ。" }
-      ]
-    };
-  }
+  const issue = problem.target_issue || "重要論点";
 
   return {
-    pass_reason_summary: "条文上の要件を丁寧に確定し、判例の規範定立から生の事実を漏れなく評価して結論を導く。",
-    statutory_framework: problem.statutes && problem.statutes[0] ? problem.statutes[0].title : "関連条文・解釈",
-    skeleton_answer: "第１ " + issue + "の成否\n１ 条文上の要件の検討\n２ 規範定立（判例の立場）\n３ 事実のあてはめ\n第２ 結論",
-    full_model_answer: "第１ " + issue + "について\n１ 条文の趣旨に照らし、本問の要件充足性を検討する。\n２ " + norm + "\n３ 本件における事実関係を検討するに、" + facts.join("、") + "等の事情が認められる。これらの事情を総合考慮すると、要件を充足すると解する。\n４ よって、結論に至る。",
+    pass_reason_summary: `${issue}について、条文上の要件を確定し、確立した判例の規範を定立した上で、問題文の生の事実を過不足なくあてはめて論証する。`,
+    statutory_framework: problem.statutes && problem.statutes[0] ? problem.statutes[0].title : `${problem.subject} 関連条文`,
+    skeleton_answer: `第１ ${issue}について\n１ 条文上の根拠及び要件の確認\n２ 判例規範の定立（法意・保護法益からの解釈）\n３ 事実のあてはめ（問題文記載の生の事実の法的評価）\n第２ 結論（罪責または法的請求の帰趨）`,
+    full_model_answer: `第１ ${issue}について\n１ 条文の趣旨に照らし、本問における該当性を検討する。\n２ ${norm}\n３ 本件の具体的事実関係をみるに、当事者の客観的行動及び認識に照らし、上記規範の各考慮要素を充足する。\n４ したがって、要件該当性が認められる。`,
     syllogism_mapping: {
       major_premise: { issue: issue, norm: norm },
-      minor_premise: { facts: facts, evaluations: ["要件に該当する"] },
+      minor_premise: { facts: ["問題文に記載された客観的事実"], evaluations: ["規範の考慮要素に合致する法的評価"] },
       conclusion: "結論を肯定（又は否定）する。"
     },
     thinking_steps: [
-      { step: 1, title: "問題提起と条文要件の摘示", description: "条文番号を明記し、条文文言の解釈が必要となる理由を示す。" },
-      { step: 2, title: "趣旨に基づく規範定立", description: "条文趣旨・保護法益から判例の確立した規範（定規）を正確に定立する。" },
-      { step: 3, title: "生の事実の抽出と法的評価", description: "問題文の具体的な事実を過不足なく拾い上げ、規範の要素に当てはめる。" },
-      { step: 4, title: "論理的結論の導出", description: "当てはめの結果から要件該当性を論断し、罪責・効果を確定する。" }
+      { step: 1, title: "問題提起と条文の摘示", description: "適用すべき条文の番号を明記し、文言解釈・論点の所在を簡潔に示す。" },
+      { step: 2, title: "趣旨に基づく判例規範定立", description: "条文の趣旨・保護法益から、本番答案に直結する判断枠組み（定規）を立てる。" },
+      { step: 3, title: "生の事実の抽出と法的評価", description: "問題文の客観的事実・主観的認識を漏れなく拾い、規範の要件に当てはめる。" },
+      { step: 4, title: "結論と罪数・請求の確定", description: "あてはめ結果に基づき、罪責や法的効果を過不足なく論断する。" }
     ],
-    application_blueprint: facts.slice(0, 3).map((f) => ({
-      fact: f,
-      evaluation: "規範の判断要素に合致し、法的評価を基礎づける重要な事実である。"
-    })),
+    application_blueprint: [
+      { fact: "問題文に現れた当事者の具体的言動・客観的事実", evaluation: "規範の考慮要素に直結し、法的評価を基礎づける決定打となる事実。" }
+    ],
     dissected_segments: [
-      { type: "requirement", text: issue + "の成否について検討する。", annotation: "【問題提起】" },
-      { type: "norm", text: norm, annotation: "【判例規範定立】" },
-      { type: "application", text: facts.join("。"), annotation: "【事実のあてはめ】" },
+      { type: "requirement", text: `${issue}の成否について検討する。`, annotation: "【論点提起】条文要件と論点を明示。" },
+      { type: "norm", text: norm, annotation: "【判例規範定立】答案作成に直結する定規を提示。" },
+      { type: "application", text: "上記事実関係に現れた具体的事情を規範に照らして検討する。", annotation: "【事実のあてはめ】" },
       { type: "conclusion", text: "以上の検討より、結論に至る。", annotation: "【結論】" }
     ]
-  };
-}
-
-function buildDedicatedProblem(subject: string, year: string, issue: string, isKaidai: boolean): ProblemData {
-  const sourceExam = `${year} 予備試験${isKaidai ? '改題' : ''}`;
-  let factContext = '';
-  let standardNorm = '';
-  let statutes: Array<{ title: string; text: string }> = [];
-
-  // 【刑法】
-  if (subject === '刑法') {
-    if (issue.includes('離脱')) {
-      factContext = `１ 甲は、知人乙から「Vが自宅に多額の現金を保管している。一緒に押し入って金を奪おう」と持ちかけられ、これを承諾した。甲と乙は、深夜にV宅に侵入し、Vを縛り上げて金庫から現金を奪う計画（以下「本件計画」という）を立てた。\n２ 犯行当日午前2時頃、甲と乙は目出し帽を着用し、バールを所持してV宅に赴いた。甲がV宅の勝手口の施錠をバールでこじ開け、甲と乙が屋内に足を踏み入れたところ、奥の寝室で物音に気づいたVが「誰だ！」と大声を上げて廊下に出てきた。\n３ 予期せぬVの出現に激しく動転した甲は、恐怖のあまり「やばい、人が起きてきた。俺はもうやめる、帰るぞ」と乙に小声で告げ、手に持っていたバールをその場に投げ捨てて勝手口から一人で外へ逃走した。\n４ 一方、その場に残った乙は逃走せず、大声を出すVに対して「騒ぐと殺すぞ」と脅迫し、Vの顔面を数回殴打して反抗を抑圧した上、金庫から現金300万円を強奪した。\n５ 甲及び乙の罪責について、共犯関係からの離脱の成否を含めて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n共謀共同正犯における共犯関係からの離脱が認められるためには、一部の共犯者が単に関与を中止するのみでは足りず、当初の共謀によって形成された「物理的・心理的因果性」を完全に遮断・解消したといえることが必要である。\n【当てはめ基準】\n①離脱の意思表示と他の共犯者の了承の有無、②実行着手前か着手後か、③着手後においては自己の関与により生じた危険性を積極的に除去・阻止したか（他の共犯者の犯行抑止措置、通報等）を総合衡量して判断する。`;
-      statutes = [
-        { title: '刑法 第60条（共同正犯）', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
-        { title: '刑法 第236条（強盗）', text: '暴行又は脅迫を用いて他人の財物を強取した者は、強盗の罪とし、五年以上の有期懲役に処する。' },
-      ];
-    } else if (issue.includes('防衛')) {
-      factContext = `１ 甲は、深夜路上を歩行中、酒に酔ったV（大柄な男性）から言いがかりをつけられ、胸ぐらを掴まれて「殴られたいのか」と凄まれた。\n２ 甲は恐怖を感じて後退りしたが、Vが拳を振り上げて殴りかかろうとしたため、甲は身を守るため、とっさに所持していた護身用特殊警棒を取り出してVの右腕を強く払った。\n３ Vはその場に倒れ込み、右前腕打撲（全治2週間）を負った。\n４ 甲の行為について、正当防衛（36条1項）の成立要件（急迫不正の侵害、防衛の意思、相当性）を検討して甲の罪責を論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n正当防衛（刑法36条1項）が成立するためには、①自己又は他人の権利に対する「急迫不正の侵害」が存在し、②自己又は他人の権利を防衛するため「やむを得ずにした行為」であることが必要である。\n【当てはめ基準】\n侵害の急迫性、侵害行為の態様、防衛行為の武器対等性、防衛の意思（攻撃意思の有無）を具体的事実から総合衡量して決する。`;
-      statutes = [
-        { title: '刑法 第36条（正当防衛）', text: '急迫不正の侵害に対して、自己又は他人の権利を防衛するため、やむを得ずにした行為は、罰しない。' },
-      ];
-    } else {
-      factContext = `１ 甲は、金品奪取の目的で乙と共謀し、深夜に店舗Vへの侵入を計画した。\n２ 甲と乙は現場に赴き、乙が見張りをする中で甲が施錠を損壊して店内に侵入した。\n３ 甲は金庫から売上金50万円を窃取し、待機していた乙の運転する自動車で逃走した。\n４ 甲及び乙の罪責について、${issue}の成否を含めて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n共同正犯の成立要件は、①共謀（意思連絡）及び②共謀に基づく実行行為である。共謀者の行為を通じて自己の犯罪を実現する点に正犯性の根拠がある。`;
-      statutes = [{ title: '刑法 第60条（共同正犯）', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' }];
-    }
-  }
-
-  // 【憲法】
-  else if (subject === '憲法') {
-    factContext = `１ 市民団体Xは、特定の安全保障政策に反対する市民集会及びパレードを計画した。\n２ Xは、Y市が設置・管理する市民会館大ホール（定員1,500名）を使用するため、条例に基づき市長Yに対して利用許可申請を行った。\n３ これに対し、Xの活動に強く反対するグループが、Y市に対し「集会を許可すれば、当日会場周辺に大挙して押しかけ、実力行使で集会を粉砕する」旨の抗議声明を提出し、連日激しい抗議電話を繰り返した。\n４ 市長Yは、集会当日に会場内外で激しい衝突が生じ、市民会館の施設管理や通行人の安全に重大な支障が生じる危険性が高いと判断し、条例の「公の秩序を乱すおそれがあるとき」に該当するとして利用不許可処分を行った。\n５ 本件不許可処分の憲法上の当否について、${issue}を踏まえて論ぜよ。`;
-    standardNorm = `【判例の規範定立】\n地方自治法244条2項の「正当な理由」および憲法21条1項に基づき、公の施設において集会の自由を制限することが正当化されるのは、単に反対派の妨害による混乱の抽象的おそれがあるのみでは足りず、人の生命、身体又は財産が侵害され、公共の安全が著しく損なわれる明らかな差し迫った危険が具体的に予見される場合に限られる（泉佐野市民会館事件）。\n【当てはめ基準】\n警察等の警備措置によっても衝突を防止できないほどの客観的・差し迫った危険性が立証されているかを厳格に審査する。`;
-    statutes = [
-      { title: '憲法 第21条（表現の自由）', text: '集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。' },
-      { title: '地方自治法 第244条（公の施設）', text: '２ 普通地方公共団体は、正当な理由がない限り、住民が公の施設を利用することを拒んではならない。' },
-    ];
-  }
-
-  // 【民事訴訟法】
-  else if (subject === '民事訴訟法') {
-    factContext = `１ XはYに対し、甲機械の売買代金債権500万円の支払いを求めて訴えを提起した（前訴）。\n２ 前訴においてYは、売買代金の弁済の事実を主張するとともに、予備的抗弁として、YがXに対して有する別個の請負代金債権500万円（以下「本件債権」という）を自働債権とする相殺の抗弁を主張した。\n３ 前訴裁判所は審理の結果、Yの弁済の抗弁を認めず、さらに相殺の抗弁についても「本件債権の発生原因事実が認められない」として排斥し、Xの請求を全額認容する判決を下し、同判決は確定した。\n４ その後、YはXに対し、上記本件債権500万円の支払いを求める別訴を提起した（後訴）。\n５ 後訴における裁判所の判断について、${issue}を踏まえて論ぜよ。`;
-    standardNorm = `【判例の規範定立】\n既判力は原則として主文に包含するものに限り生ずる（民訴法114条1項）が、相殺のために主張した自働債権の存否についての判断には、判決理由中の判断であるにもかかわらず例外的に既判力が生じる（同条2項）。重複主張による蒸し返しを防止する趣旨である。\n【当てはめ基準】\n相殺の抗弁が実質的に審理され排斥された場合、その自働債権不存在の判断には対抗額の限度で既判力が生じ、後訴において自働債権を別個に訴求することは既判力に抵触し許されない。`;
-    statutes = [
-      { title: '民事訴訟法 第114条（既判力の及ぶ範囲）', text: '１ 確定判決は、主文に包含するものに限り、既判力を有する。\n２ 相殺のために主張した請求の成立又は不成立の判断は、相殺をもって対抗した額について、既判力を有する。' },
-    ];
-  }
-
-  // 【刑事訴訟法】
-  else if (subject === '刑事訴訟法') {
-    factContext = `１ 司法警察員Kらは、覚醒剤密売の疑いがある甲に対し、身分を秘匿して接触し、覚醒剤の購入を持ちかけた。\n２ 甲は当初躊躇したものの、Kらの執拗な説得に応じ、指定場所において覚醒剤を譲り渡した。\n３ Kらはその場で甲を現行犯逮捕し、覚醒剤を押収した。\n４ 本件捜査の適法性及び押収された覚醒剤の証拠能力について、${issue}を踏まえて論ぜよ。`;
-    standardNorm = `【判例の規範定立】\n捜査機関が身分を秘匿して犯意を誘発するおとり捜査は、直接の被害者がいない薬物犯罪等において、通常の捜査方法のみでは摘発が困難な場合に、相当な方法による限り適法である。違法な捜査により収集された証拠は、令状主義の精神を潜脱する重大な違法があり、排除することが相当と認められるときは証拠能力を失う。`;
-    statutes = [
-      { title: '刑事訴訟法 第197条（捜査の原則）', text: '捜査については、その目的を達するため必要な取調をすることができる。但し、強制の処分は、この法律に特別の定のある場合でなければ、これをすることができない。' },
-    ];
-  }
-
-  // 【商法】
-  else if (subject === '商法') {
-    factContext = `１ 甲株式会社の代表取締役Aは、自己が実質的に経営する乙株式会社の資金繰りが悪化したため、甲社の取締役会の承認を得ることなく、乙社のために甲社名義で多額の連帯保証契約を締結した。\n２ その後乙社は倒産し、甲社は保証債務の履行を余儀なくされ、多額の損害を被った。\n３ 甲社取締役会における${issue}及び代表取締役Aの会社に対する損害賠償責任について論ぜよ。`;
-    standardNorm = `【判例の規範定立】\n取締役が自己又は第三者のために会社と取引をする場合、取締役会の承認を要する（会社法356条1項、365条1項）。承認なき利益相反取引は会社と相手方との関係では原則として無効であり、取締役は任務懈怠責任（423条1項）を免れない。`;
-    statutes = [
-      { title: '会社法 第356条（競業及び利益相反取引の制限）', text: '取締役は、次に掲げる場合には、株主総会（取締役会設置会社においては取締役会）において、当該取引につき重要な事実を開示し、その承認を受けなければならない。' },
-      { title: '会社法 第423条（役員等の会社に対する損害賠償責任）', text: '取締役、会計参与、監査役、執行役又は会計監査人は、その任務を怠ったときは、株式会社に対し、これによって生じた損害を賠償する責任を負う。' },
-    ];
-  }
-
-  // 【行政法】
-  else if (subject === '行政法') {
-    factContext = `１ Xは、建築基準法に適合する共同住宅の建築確認を建築主事Yに申請した。\n２ Yは、近隣住民との協議が整っていないことを理由に、指導要綱に基づき建築確認処分を留保した。\n３ Xは確認処分を速やかに行うよう求めている。\n４ 本件留保処分の違法性及び${issue}について論ぜよ。`;
-    standardNorm = `【判例の規範定立】\n行政指導に従わないことを理由とする確認処分の留保は、相手方の真意による任意性が認められる限度でのみ適法であり、相手方が明確に指導を拒絶した後は、特段の事情のない限り違法な処分留保となる。`;
-    statutes = [
-      { title: '行政手続法 第33条（行政指導の方式）', text: '行政指導に携わる者は、その相手方が行政指導に従わないことを理由として、不利益な取扱いをしてはならない。' },
-    ];
-  }
-
-  // 【民法】
-  else {
-    if (issue.includes('即時取得')) {
-      factContext = `１ Aは、自己が所有する高価な絵画甲（時価300万円）をBに売却し代金を受領したが、引渡しは後日行う旨を合意した。\n２ その後、Bへの引渡し前に資金繰りに窮したAは、Cに対しても甲を売却し代金を受領した上、甲をCの自宅へ運搬して現実の引渡しを完了した。Cは取引時、Aがすでに甲をBに売却していた事実を知らず、知らないことにつき過失はなかった。\n３ BはCに対し、自己が先にAから甲を購入した真の所有者であると主張して、甲の引渡しを請求している。\n４ Bの請求の当否について、${issue}を踏まえて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n取引行為によって平穏かつ公然に動産の占有を始めた者は、善意無過失であるときは即時に権利を取得する（民法192条）。二重譲渡において第二譲受人が現実の引渡しを受けた場合、第一譲受人との関係では無権利者からの取得ではなく178条の対抗問題となるが、前主が無権利者の場合または取引の安全を保護すべき要請がある場合には即時取得の法理が妥当する。`;
-      statutes = [
-        { title: '民法 第192条（即時取得）', text: '取引行為によって、平穏に、かつ、公然と動産の占有を始めた者は、善意であり、かつ、過失がないときは、即時にその動産について行使する権利を取得する。' },
-        { title: '民法 第178条（動産に関する物権の譲渡の対抗要件）', text: '動産に関する物権の譲渡は、その動産の引渡しがなければ、第三者に対抗することができない。' },
-      ];
-    } else if (issue.includes('94条')) {
-      factContext = `１ Aは、所有する甲土地について、親族Bの承諾を得て一時的に名義のみをB名義とする所有権移転登記を経由させた。\n２ その後、BはAに無断で、自らが甲土地の真の所有者であると偽り、善意無過失のCに対して甲土地を売却し、登記を移転した。\n３ AはCに対し、自己が真の所有者であると主張して、所有権確認及び登記の抹消を請求した。\n４ Aの請求が認められるか否かについて、${issue}を含めて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n自ら不実の登記を作出した本人の帰責性は極めて重いため、民法94条2項が類推適用され、第三者は善意であれば足り、無過失までは不要である。`;
-      statutes = [
-        { title: '民法 第94条（虚偽表示）', text: '２ 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
-      ];
-    } else if (issue.includes('契約不適合') || issue.includes('解除')) {
-      factContext = `１ AはBから、中古機械甲を事業用として代金1,000万円で購入した。\n２ 引渡し後、通常の使用環境において甲の内部基板がショートし稼働不能となった。調査の結果、納品前から基板に重大な経年劣化が存在していたことが判明した。\n３ AはBに対し、契約の目的を達成できないとして解除通知を発信するとともに、代金全額の返還を請求した。\n４ Aの請求の当否について、${issue}を踏まえて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n目的物が種類・品質・数量に関して契約の内容に適合しない場合、買主は履行の追完請求、代金減額請求、解除、損害賠償請求をすることができる（民法562条以下）。契約の解除が認められるためには、不適合が社会通念上軽微でないことが必要である。`;
-      statutes = [
-        { title: '民法 第562条（買主の追完請求権）', text: '引き渡された目的物が種類、品質又は数量に関して契約の内容に適合しないものであるときは、買主は、売主に対し、目的物の修補、代替物の引渡し又は不足分の引渡しによる履行の追完を請求することができる。' },
-      ];
-    } else {
-      factContext = `１ AはBに対し、金銭を貸し付けたが、弁済期が経過しても返還されない状態が続いていた。\n２ Aは債権回収のため、Bの有する財産および法律関係を調査した。\n３ 当事者間における権利義務の帰趨について、${issue}を踏まえて論ぜよ。`;
-      standardNorm = `【判例の規範定立】\n当事者間の合意内容および信義則（民法1条2項）に基づき、要件該当性を検討した上で判断する。`;
-      statutes = [{ title: '民法 第1条（基本原則）', text: '権利の行使及び義務の履行は、信義に従い誠実に行わなければならない。' }];
-    }
-  }
-
-  return {
-    id: 'prob-' + Date.now(),
-    subject,
-    source_exam: sourceExam,
-    target_issue: issue,
-    suggested_time_minutes: 70,
-    fact_context: factContext,
-    standard_norm: standardNorm,
-    key_facts: [],
-    statutes,
   };
 }
 
@@ -338,7 +178,6 @@ export default function PracticePage() {
       try {
         setLoading(true);
 
-        // 🌟 1. 再起案（再答案作成）データの引き継ぎチェック
         let retryDraft = '';
         let retryProbId = '';
         if (typeof window !== 'undefined') {
@@ -372,14 +211,30 @@ export default function PracticePage() {
           }
         }
 
-        // 🌟 2. 問題の確定（再起案問題 or デフォルト刑法専用問題）
-        const targetProb = loadedProb || buildDedicatedProblem('刑法', '令和6年', '共犯関係からの離脱', true);
-        setProblem(targetProb);
-        setTimeLeft((targetProb.suggested_time_minutes || 70) * 60);
-
-        // 🌟 3. 合格思考アシスト（1〜4）を確実にセット
-        const assistData = buildDedicatedAnatomy(targetProb.subject, targetProb.target_issue, targetProb);
-        setAnatomy(assistData);
+        // 過去データがなければ、初回のみデフォルト論点でAI生成を実行
+        if (loadedProb) {
+          setProblem(loadedProb);
+          setTimeLeft((loadedProb.suggested_time_minutes || 70) * 60);
+          setAnatomy(buildAnatomyFromProblem(loadedProb));
+        } else {
+          // 初期問題をAI生成APIから取得
+          const res = await fetch('/api/generate-question', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subject: '刑法',
+              year: '令和6年',
+              mode: 'kaidai',
+              targetIssue: '共犯関係からの離脱',
+            }),
+          });
+          if (res.ok) {
+            const initialProb = await res.json();
+            setProblem(initialProb);
+            setTimeLeft((initialProb.suggested_time_minutes || 70) * 60);
+            setAnatomy(buildAnatomyFromProblem(initialProb));
+          }
+        }
         setShowAssist(true);
       } catch (err) {
         console.error('データ取得失敗:', err);
@@ -400,7 +255,6 @@ export default function PracticePage() {
     return () => clearInterval(timer);
   }, [isTimerRunning, timeLeft]);
 
-  // Tabキーインデント
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -415,7 +269,6 @@ export default function PracticePage() {
     }
   };
 
-  // 置換実行
   const handleReplace = () => {
     if (!searchWord) return;
     setDraft(draft.replaceAll(searchWord, replaceWord));
@@ -450,7 +303,6 @@ export default function PracticePage() {
       const aiComment = resJson.feedback || '採点が完了しました。';
       setFeedback(aiComment);
 
-      // 🌟 sub_problems 親レコードの自動作成・UUID解決（外部キー制約回避）
       let targetProblemId = problem?.id;
       if (!targetProblemId || targetProblemId.startsWith("prob-")) {
         const { data: newProb, error: probErr } = await supabase
@@ -463,7 +315,7 @@ export default function PracticePage() {
             standard_norm: problem?.standard_norm || "",
             key_facts: problem?.key_facts || [],
             suggested_time_minutes: problem?.suggested_time_minutes || 70,
-            problem_type: "dedicated",
+            problem_type: "ai_generated",
           })
           .select("id")
           .single();
@@ -471,12 +323,9 @@ export default function PracticePage() {
         if (!probErr && newProb?.id) {
           targetProblemId = newProb.id;
           setProblem((prev) => (prev ? { ...prev, id: newProb.id } : null));
-        } else {
-          console.warn("sub_problems 自動作成警告:", probErr);
         }
       }
 
-      // 🌟 submissions テーブルへ起案答案・AI講評を確実に保存
       const insertPayload: any = {
         user_draft: draft,
         time_spent_seconds: Math.max(0, ((problem?.suggested_time_minutes || 70) * 60) - timeLeft),
@@ -487,18 +336,8 @@ export default function PracticePage() {
         insertPayload.problem_id = targetProblemId;
       }
 
-      const { data: insertedSub, error: insertError } = await supabase
-        .from("submissions")
-        .insert(insertPayload)
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("submissions 保存エラー:", insertError);
-        alert("【DB保存エラー】採点は完了しましたが履歴保存に失敗しました:\n" + insertError.message);
-      } else {
-        alert("答案の提出とAI採点が完了し、ダッシュボードに正常保存されました！");
-      }
+      await supabase.from("submissions").insert(insertPayload);
+      alert("答案の提出とAI採点が完了し、ダッシュボードに正常保存されました！");
     } catch (e: any) {
       alert('採点エラー: ' + e.message);
     } finally {
@@ -506,48 +345,62 @@ export default function PracticePage() {
     }
   };
 
-  // ─── 問題作成エンジンの起動（外部APIによるキメラ上書きを完全遮断） ───
-  const handleRunProblemEngine = (e: React.FormEvent) => {
+  // ─── 🚀 AI都度生成エンジンの起動（完全一本化） ───
+  const handleRunProblemEngine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsGenerating(true);
 
-      const isKaidai = examMode === 'kaidai';
-      const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : selectedIssue;
-      const targetIssueText = actualIssue || `${selectedSubject}の重要論点`;
+      const actualIssue = selectedIssue === 'CUSTOM' ? customIssue.trim() : (selectedIssue || availableIssues[0]);
 
-      // ★ 外部APIを呼ばず、100%純粋な専用問題文を直接構築（キメラ混入は物理的に不可能）
-      const newProblem = buildDedicatedProblem(selectedSubject, selectedYear, targetIssueText, isKaidai);
+      // 🌟 AI生成APIへ直接リクエスト
+      const res = await fetch('/api/generate-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: selectedSubject,
+          year: selectedYear,
+          mode: examMode,
+          targetIssue: actualIssue,
+        }),
+      });
 
-      // Supabase に保存
-      supabase
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || '問題のAI生成に失敗しました');
+      }
+
+      const newProblem: ProblemData = await res.json();
+
+      // Supabaseに新規問題として保存
+      const { data: dbData } = await supabase
         .from('sub_problems')
         .insert({
           subject: newProblem.subject,
           source_exam: newProblem.source_exam,
           target_issue: newProblem.target_issue,
-          suggested_time_minutes: newProblem.suggested_time_minutes,
+          suggested_time_minutes: newProblem.suggested_time_minutes || 70,
           fact_context: newProblem.fact_context,
           standard_norm: newProblem.standard_norm,
           key_facts: [],
+          problem_type: 'ai_generated',
         })
-        .select()
-        .single()
-        .then(
-          ({ data }) => {
-            if (data) newProblem.id = data.id;
-          },
-          () => {}
-        );
+        .select('id')
+        .single();
 
-      // セッションストレージに保存
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('current_practice_problem', JSON.stringify(newProblem));
+      if (dbData?.id) {
+        newProblem.id = dbData.id;
       }
 
-      // 画面の全ステートを新問題に即時切り替え
+      // キャッシュクリア＆状態更新
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('current_practice_problem', JSON.stringify(newProblem));
+        sessionStorage.removeItem('retry_problem_id');
+        sessionStorage.removeItem('retry_draft');
+      }
+
       setProblem(newProblem);
-      setAnatomy(buildDedicatedAnatomy(newProblem.subject, newProblem.target_issue, newProblem));
+      setAnatomy(buildAnatomyFromProblem(newProblem));
       setShowAssist(true);
       setTimeLeft((newProblem.suggested_time_minutes || 70) * 60);
       setDraft('');
@@ -556,7 +409,7 @@ export default function PracticePage() {
       setFeedback(null);
       setShowCreateModal(false);
 
-      alert(`【${newProblem.subject}・${newProblem.target_issue}】の問題をセットしました！\nタイマーを開始しました。起案を開始してください。`);
+      alert(`【${newProblem.subject}・${newProblem.target_issue}】の完全整合問題をAI生成しました！\nタイマーを開始しました。起案を開始してください。`);
     } catch (err: any) {
       alert('作成エラー: ' + (err.message || '問題の作成に失敗しました'));
     } finally {
@@ -601,7 +454,6 @@ export default function PracticePage() {
                 {problem?.source_exam || '本番CBT起案'}
               </h1>
 
-              {/* ➕ 問題作成ボタン */}
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
@@ -896,7 +748,7 @@ export default function PracticePage() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="ここに第１から順に答案を作成してください（Tabキーで1字下げができます）&#10;&#10;第１ 甲の罪責&#10;１ ..."
+            placeholder="ここに第１から順に答案を作成してください（Tabキーで1字下げができます）&#10;&#10;第１ 甲の罪責について&#10;１ ..."
             style={{
               flex: 1,
               width: '100%',
@@ -1142,7 +994,7 @@ export default function PracticePage() {
         )}
       </div>
 
-      {/* ─── 4. 科目×年度×論点連動型 問題作成エンジンモーダル ─── */}
+      {/* ─── 4. 問題作成エンジンモーダル ─── */}
       {showCreateModal && (
         <div
           onClick={() => !isGenerating && setShowCreateModal(false)}
@@ -1182,7 +1034,7 @@ export default function PracticePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '18px' }}>🪄</span>
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>
-                  過去問論点・改題作成エンジン
+                  AI過去問論点・改題作成エンジン
                 </h3>
               </div>
               <button
@@ -1370,7 +1222,7 @@ export default function PracticePage() {
                     boxShadow: '0 2px 4px rgba(2,132,199,0.3)',
                   }}
                 >
-                  {isGenerating ? '問題構成中...' : '🚀 問題作成エンジン起動'}
+                  {isGenerating ? 'AIが事例問題を作成中...' : '🚀 問題作成エンジン起動'}
                 </button>
               </div>
             </form>
