@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 // ピーク時に順次切り替える稼働中モデル
 const CANDIDATE_MODELS = [
   'gemini-3.8-flash',
-  'gemini-3.8-pro',
+  'gemini-3.8-flash',
 ];
 
 export async function POST(req: Request) {
