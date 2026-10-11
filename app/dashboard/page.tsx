@@ -2,40 +2,54 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type SubmissionItem = {
   id: string;
+  created_at: string;
   problem_id: string;
   user_draft: string;
   time_spent_seconds: number;
   ai_feedback: string;
-  created_at: string;
   sub_problems?: {
-    subject?: string;
-    source_exam?: string;
-    target_issue?: string;
+    subject: string;
+    source_exam: string;
+    target_issue: string;
   };
 };
 
+type FontSizeLevel = 'sm' | 'base' | 'lg' | 'xl';
+
+const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string }> = {
+  sm: { text: '13px', lh: '1.6', label: '小 (13px)' },
+  base: { text: '15px', lh: '1.75', label: '標準 (15px)' },
+  lg: { text: '17px', lh: '1.85', label: '大 (17px)' },
+  xl: { text: '20px', lh: '1.95', label: '特大 (20px)' },
+};
+
 export default function DashboardPage() {
+  const router = useRouter();
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
 
-  // 履歴一覧取得
-  const fetchSubmissions = async () => {
+  useEffect(() => {
+    fetchSubmissions();
+  }, []);
+
+  async function fetchSubmissions() {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('submissions')
         .select(`
           id,
+          created_at,
           problem_id,
           user_draft,
           time_spent_seconds,
           ai_feedback,
-          created_at,
           sub_problems (
             subject,
             source_exam,
@@ -47,71 +61,58 @@ export default function DashboardPage() {
       if (error) throw error;
       setSubmissions((data as any) || []);
     } catch (err: any) {
-      console.error('履歴取得失敗:', err);
+      console.error('履歴取得エラー:', err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-
-  // 履歴削除処理
   const handleDelete = async (id: string) => {
-    if (!confirm('この起案履歴を削除しますか？\n※削除した答案は元に戻せません。')) return;
-
+    if (!confirm('この起案履歴を削除しますか？')) return;
     try {
-      setDeletingId(id);
       const { error } = await supabase.from('submissions').delete().eq('id', id);
-
       if (error) throw error;
-
-      // 画面の状態を即座に更新
-      setSubmissions((prev) => prev.filter((item) => item.id !== id));
-      alert('履歴を削除しました。');
+      setSubmissions(submissions.filter((s) => s.id !== id));
     } catch (err: any) {
-      alert('削除エラー: ' + (err.message || '削除に失敗しました'));
-    } finally {
-      setDeletingId(null);
+      alert('削除に失敗しました: ' + err.message);
     }
   };
 
-  // 再起案（practiceへデータ引き継ぎ）
-  const handleRetry = (problemId: string, draft: string) => {
+  const handleRetry = (problemId: string, userDraft: string) => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('retry_problem_id', problemId);
-      sessionStorage.setItem('retry_draft', draft);
+      sessionStorage.setItem('retry_draft', userDraft);
     }
+    router.push('/practice');
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', fontFamily: 'sans-serif', padding: '24px 16px' }}>
-      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', fontFamily: 'sans-serif', padding: '24px 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* ヘッダーエリア */}
         <header
           style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '16px 24px',
+            marginBottom: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: '1px solid #cbd5e1',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: '#ffffff',
-            padding: '16px 24px',
-            borderRadius: '12px',
-            border: '1px solid #cbd5e1',
-            marginBottom: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
             flexWrap: 'wrap',
             gap: '12px',
           }}
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '20px' }}>📋</span>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>
+              <span style={{ fontSize: '24px' }}>📋</span>
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#0f172a' }}>
                 起案・添削履歴一覧
               </h1>
-              <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
+              <span style={{ backgroundColor: '#e2e8f0', color: '#334155', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
                 {submissions.length} 件
               </span>
             </div>
@@ -120,60 +121,83 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* 文字サイズ変更コントローラー */}
+            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 6px', gap: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', marginRight: '4px' }}>🔍 文字サイズ</span>
+              {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => {
+                const isActive = fontSize === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setFontSize(level)}
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      border: isActive ? '1px solid #0284c7' : 'none',
+                      backgroundColor: isActive ? '#0284c7' : 'transparent',
+                      color: isActive ? '#ffffff' : '#334155',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {level === 'sm' ? '小' : level === 'base' ? '標準' : level === 'lg' ? '大' : '特大'}
+                  </button>
+                );
+              })}
+            </div>
+
             <Link
               href="/practice"
               style={{
-                padding: '8px 16px',
                 backgroundColor: '#0284c7',
                 color: '#ffffff',
-                fontSize: '12px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                borderRadius: '6px',
                 textDecoration: 'none',
-                boxShadow: '0 2px 4px rgba(2,132,199,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
+                boxShadow: '0 2px 4px rgba(2,132,199,0.25)',
               }}
             >
-              ✍️️ CBT起案室へ戻る
+              ✍️ CBT起案室へ戻る
             </Link>
           </div>
         </header>
 
-        {/* メインコンテンツ */}
+        {/* 履歴リスト */}
         {loading ? (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#64748b', border: '1px solid #cbd5e1', fontWeight: 'bold' }}>
-            履歴を読み込み中...
+          <div style={{ backgroundColor: '#ffffff', padding: '40px', textAlign: 'center', borderRadius: '12px', color: '#64748b' }}>
+            履歴データを読み込み中...
           </div>
         ) : submissions.length === 0 ? (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#64748b', border: '1px solid #cbd5e1' }}>
-            <p style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px', color: '#334155' }}>
-              提出済みの起案履歴がありません。
-            </p>
+          <div style={{ backgroundColor: '#ffffff', padding: '60px 20px', textAlign: 'center', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+            <p style={{ fontSize: '16px', color: '#64748b', margin: '0 0 16px' }}>まだ提出された起案履歴がありません。</p>
             <Link
               href="/practice"
               style={{
-                display: 'inline-block',
-                padding: '9px 18px',
                 backgroundColor: '#0284c7',
                 color: '#ffffff',
-                fontSize: '13px',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontSize: '14px',
                 fontWeight: 'bold',
-                borderRadius: '6px',
                 textDecoration: 'none',
               }}
             >
-              最初の起案を始める →
+              最初の起案をはじめる
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {submissions.map((sub) => {
-              const minutes = Math.floor(sub.time_spent_seconds / 60);
-              const dateStr = new Date(sub.created_at).toLocaleString('ja-JP');
-              const isDeleting = deletingId === sub.id;
+              const minutesSpent = Math.floor(sub.time_spent_seconds / 60);
+              const formattedDate = new Date(sub.created_at).toLocaleString('ja-JP');
+              const subjectName = sub.sub_problems?.subject || '科目未分類';
+              const issueName = sub.sub_problems?.target_issue || '総合問題';
+              const examName = sub.sub_problems?.source_exam || '本番形式';
 
               return (
                 <div
@@ -182,119 +206,115 @@ export default function DashboardPage() {
                     backgroundColor: '#ffffff',
                     borderRadius: '12px',
                     border: '1px solid #cbd5e1',
-                    padding: '20px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                    position: 'relative',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                    overflow: 'hidden',
                   }}
                 >
-                  {/* カード上部情報バー */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid #e2e8f0',
-                      paddingBottom: '12px',
-                      marginBottom: '14px',
-                      flexWrap: 'wrap',
-                      gap: '12px',
-                    }}
-                  >
+                  {/* カード上部：論点メタ情報 & 操作ボタン */}
+                  <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
-                          {sub.sub_problems?.subject || '民法'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                          {subjectName}
                         </span>
-                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>
-                          {sub.sub_problems?.source_exam || '予備試験'}
+                        <span style={{ fontSize: '12px', color: '#475569', fontWeight: 'bold' }}>
+                          {examName}
                         </span>
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          📅 {dateStr}
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          📅 {formattedDate}
                         </span>
                       </div>
-                      <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>
-                        論点: {sub.sub_problems?.target_issue || '民法総合'}
-                      </h2>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>
+                        論点: {issueName}
+                      </h3>
                     </div>
 
-                    {/* 操作ボタン群（右上に常時表示） */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', color: '#475569', fontWeight: 'bold', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        ⏱ {minutes}分
+                      <span style={{ fontSize: '12px', color: '#475569', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}>
+                        ⏱ {minutesSpent}分
                       </span>
-
-                      {/* 再起案ボタン */}
-                      <Link
-                        href="/practice"
+                      <button
+                        type="button"
                         onClick={() => handleRetry(sub.problem_id, sub.user_draft)}
                         style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#f1f5f9',
+                          padding: '5px 12px',
+                          backgroundColor: '#ffffff',
                           border: '1px solid #cbd5e1',
-                          color: '#0f172a',
+                          borderRadius: '6px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          borderRadius: '6px',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          color: '#0369a1',
+                          cursor: 'pointer',
                         }}
                       >
                         🔄 再起案
-                      </Link>
-
-                      {/* 🗑️ 削除ボタン（赤色で明確化） */}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(sub.id)}
-                        disabled={isDeleting}
                         style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#fee2e2',
-                          border: '1px solid #f87171',
-                          color: '#b91c1c',
+                          padding: '5px 12px',
+                          backgroundColor: '#fef2f2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          borderRadius: '6px',
-                          cursor: isDeleting ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          boxShadow: '0 1px 2px rgba(220, 38, 38, 0.1)',
+                          color: '#dc2626',
+                          cursor: 'pointer',
                         }}
                       >
-                        {isDeleting ? '削除中...' : '🗑️ 削除'}
+                        🗑 削除
                       </button>
                     </div>
                   </div>
 
-                  {/* 答案本文 ＆ AI採点講評（2列レイアウト） */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-                    {/* 提出答案 */}
-                    <div style={{ backgroundColor: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>
-                          📝 あなたの提出答案
-                        </span>
-                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
-                          {sub.user_draft.length} 文字 (約 {(sub.user_draft.length / 690).toFixed(1)} 頁)
+                  {/* カード下部：提出答案 ＆ AI採点講評（選択サイズを適用） */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '16px', padding: '20px' }}>
+                    
+                    {/* あなたの提出答案 */}
+                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>📝 あなたの提出答案</span>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>
+                          {sub.user_draft.length} 文字（約 {(sub.user_draft.length / 690).toFixed(1)} 頁）
                         </span>
                       </div>
-                      <pre style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', fontFamily: 'serif', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', color: '#1e293b' }}>
+                      <div
+                        style={{
+                          fontFamily: 'serif',
+                          fontSize: fontSizes[fontSize].text,
+                          lineHeight: fontSizes[fontSize].lh,
+                          color: '#1e293b',
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '380px',
+                          overflowY: 'auto',
+                          paddingRight: '6px',
+                        }}
+                      >
                         {sub.user_draft}
-                      </pre>
+                      </div>
                     </div>
 
                     {/* AI採点・添削講評 */}
-                    <div style={{ backgroundColor: '#fffbeb', padding: '14px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400e', marginBottom: '6px' }}>
-                        ⚖️ AI採点・添削講評
+                    <div style={{ backgroundColor: '#fffdf5', border: '1px solid #fef08a', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ marginBottom: '10px', borderBottom: '1px solid #fef9c3', paddingBottom: '6px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#854d0e' }}>⚖️ AI採点・添削講評</span>
                       </div>
-                      <div style={{ fontSize: '12px', lineHeight: '1.6', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', color: '#78350f' }}>
-                        {sub.ai_feedback || '講評データなし'}
+                      <div
+                        style={{
+                          fontSize: fontSizes[fontSize].text,
+                          lineHeight: fontSizes[fontSize].lh,
+                          color: '#1e293b',
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '380px',
+                          overflowY: 'auto',
+                          paddingRight: '6px',
+                        }}
+                      >
+                        {sub.ai_feedback}
                       </div>
                     </div>
+
                   </div>
                 </div>
               );
