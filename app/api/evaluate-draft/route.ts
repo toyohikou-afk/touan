@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userDraft, timeSpentSeconds, standardNorm, keyFacts } = body;
+    const { userDraft, problemText, timeSpentSeconds, standardNorm, keyFacts } = body;
 
     if (!userDraft || userDraft.trim() === '') {
       return NextResponse.json(
@@ -17,73 +17,87 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json({
-        feedback: `【システム簡易講評（APIキー未設定）】\n\n・起案文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒\n\n※Vercelに GEMINI_API_KEY を設定してください。`,
+        subject: '民法',
+        target_issue: '民法総合',
+        feedback: `【システム簡易講評（APIキー未設定）】\n\n・文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒`,
       });
     }
 
     const prompt = `あなたは司法試験・予備試験の考査委員・実務家採点者です。
-受験生が作成した以下の起案答案を、判例の規範定立、当てはめ基準を入れて答案作成に直結する表現で厳格に採点・添削してください。
+受験生の答案および問題文から「科目」と「主たる論点」を正確に特定し、厳格な採点・添削を行ってください。
 
-【採点基準・着眼点】
-1. 規範定立：条文の趣旨から判例の規範を正確に導き出せているか。
-2. あてはめ：問題文の生の事実を漏れなく拾い、法的評価を加えたあてはめができているか。
-3. 三段論法：問題提起→規範定立→あてはめ→結論の骨格が崩れていないか。
-
-【問題の基準規範】
-${standardNorm || '判例の規範定立および当てはめ基準'}
-
-【拾うべき生の事実】
-${keyFacts ? JSON.stringify(keyFacts) : '事実関係'}
+【問題文（参考）】
+${problemText || 'なし'}
 
 【受験生の起案答案】
 ${userDraft}
 
-【出力フォーマット】
-以下の構成で具体的かつ実践的に講評してください：
-【総合評価】（A〜F判定、または推定得点・目安）
-【第１：規範定立の評価】（判例との整合性・表現の過不足）
-【第２：事実のあてはめの評価】（拾えた事実・落とした事実・法的評価の質）
-【第３：三段論法・形式面の講評】
-【次回に向けた改善ポイント】`;
+【基準規範・参考情報】
+${standardNorm || '答案から自動判定'}
+
+【タスク】
+1. 科目を「憲法」「行政法」「民法」「商法」「民事訴訟法」「刑法」「刑事訴訟法」等から1つ判定。
+2. 主たる論点（例:「共犯からの離脱」「94条2項110条類推適用」等）を端的に抽出。
+3. 規範定立（判例基準）、事実の抽出と法的評価、三段論法を厳格に採点。
+
+必ず以下のJSONフォーマットのみを出力してください（Markdownコードブロックは不要）：
+{
+  "subject": "判定した科目名",
+  "target_issue": "判定した論点名",
+  "feedback": "【総合評価】...\\n\\n【第１：規範定立の評価】...\\n\\n【第２：事実のあてはめの評価】...\\n\\n【第３：三段論法・形式面の講評】...\\n\\n【次回に向けた改善ポイント】..."
+}`;
 
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // 現行提供中で、1日1500回利用可能なモデルを優先したフォールバック順
-    const candidateModels = [
-      'gemini-3.5-flash',
-      'gemini-3.1-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-3.8-flash',
-    ];
+    let responseText = '';
+    let lastError: any = null;
 
-    let feedbackText = '';
-    const errors: string[] = [];
-
-    for (const modelName of candidateModels) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        console.log(`[evaluate-draft] Attempting: ${modelName}`);
         const response = await ai.models.generateContent({
-          model: modelName,
+          model: 'gemini-3.8-flash',
           contents: prompt,
         });
 
-        if (response && response.text) {
-          feedbackText = response.text;
-          console.log(`[evaluate-draft] Success with: ${modelName}`);
+        if (response.text) {
+          responseText = response.text;
           break;
         }
       } catch (err: any) {
-        console.warn(`[evaluate-draft] ${modelName} failed:`, err.message);
-        errors.push(`${modelName}: ${err.message || '通信エラー'}`);
-        await new Promise((res) => setTimeout(res, 400));
+        lastError = err;
+        console.warn(`Attempt ${attempt} failed:`, err.message);
+        if (attempt < 3) {
+          await new Promise((res) => setTimeout(res, 1500));
+        }
       }
     }
 
-    if (!feedbackText) {
-      throw new Error(`全候補モデルでエラーが発生しました:\n${errors.join('\n')}`);
+    if (!responseText) {
+      throw lastError || new Error('採点生成に失敗しました。');
     }
 
-    return NextResponse.json({ feedback: feedbackText });
+    // JSONパース（Markdown表記除去を含む安全設計）
+    let cleanJson = responseText.trim();
+    if (cleanJson.startsWith('```json')) cleanJson = cleanJson.slice(7);
+    if (cleanJson.startsWith('```')) cleanJson = cleanJson.slice(3);
+    if (cleanJson.endsWith('```')) cleanJson = cleanJson.slice(0, -3);
+
+    let parsedResult: any = {};
+    try {
+      parsedResult = JSON.parse(cleanJson);
+    } catch {
+      parsedResult = {
+        subject: '判定中',
+        target_issue: '論点分析',
+        feedback: responseText,
+      };
+    }
+
+    return NextResponse.json({
+      subject: parsedResult.subject || '法律総合',
+      target_issue: parsedResult.target_issue || '総合問題',
+      feedback: parsedResult.feedback || responseText,
+    });
   } catch (error: any) {
     console.error('API Route Exception:', error);
     return NextResponse.json({
