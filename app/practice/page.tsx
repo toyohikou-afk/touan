@@ -9,10 +9,8 @@ type DrillGuideItem = {
   fatalMistakes: string[];
   logicFramework: string[];
   template: string;
-  defaultTemplate?: string;
 };
 
-// 全科目共通・考査委員の即死地雷チェック ＆ 思考フレームワーク定義
 const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
   '刑法': {
     title: '刑法：主犯先行・法的三段論法・共犯論の射程',
@@ -476,92 +474,72 @@ export default function PracticePage() {
   const currentDrill = SUBJECT_DRILL_GUIDES[currentProblem.subject] || SUBJECT_DRILL_GUIDES['刑法'];
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif' }}>
+    <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
-      {/* 最上部ヘッダー（左端に直通の戻るボタンを常設） */}
-      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          
-          {/* ★ 左端固定：論証アプリへの戻るボタン */}
-          <a
-            href="https://yobi-ronsho-app.vercel.app/"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#f59e0b',
-              color: '#0f172a',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: '900',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 1px 2px rgba(245,158,11,0.25)',
-              flexShrink: 0
-            }}
-          >
-            ← 📇 論証アプリ
-          </a>
+      {/* すっきり1行に収まる起案ヘッダー（重複した戻るボタンを撤廃し幅を最適化） */}
+      <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
+        
+        {/* 左側：科目選択 ＆ 問題選択 ＆ 保存状態 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '18px' }}>⚖️</span>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
-              <select
-                value={selectedSubjectFilter}
-                onChange={(e) => handleSubjectChange(e.target.value)}
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  padding: '4px 6px',
-                  borderRadius: '6px',
-                  border: '1.5px solid #2563eb',
-                  backgroundColor: '#eff6ff',
-                  color: '#1d4ed8',
-                  cursor: 'pointer',
-                  outline: 'none',
-                }}
-              >
-                <option value="ALL">全科目 ({problems.length})</option>
-                {availableSubjects.map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
-              <select
-                value={selectedProblemId}
-                onChange={(e) => handleProblemChange(e.target.value)}
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  padding: '4px 6px',
-                  borderRadius: '6px',
-                  border: '1px solid #94a3b8',
-                  backgroundColor: '#ffffff',
-                  color: '#0f172a',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  maxWidth: '260px'
-                }}
-              >
-                {filteredProblems.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    [{p.subject}] {p.target_issue}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span style={{ fontSize: '10px', padding: '2px 5px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
-              {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
+            <select
+              value={selectedSubjectFilter}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1.5px solid #2563eb',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="ALL">全科目 ({problems.length})</option>
+              {availableSubjects.map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
+            <select
+              value={selectedProblemId}
+              onChange={(e) => handleProblemChange(e.target.value)}
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid #94a3b8',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                cursor: 'pointer',
+                outline: 'none',
+                maxWidth: '320px'
+              }}
+            >
+              {filteredProblems.map((p) => (
+                <option key={p.id} value={p.id}>
+                  [{p.subject}] {p.target_issue}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
+            {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
+          </span>
         </div>
 
-        {/* 右側：文字サイズ・タイマー・履歴リンク */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* 右側：文字サイズ ＆ 70分タイマー ＆ 答案履歴リンク */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -585,7 +563,7 @@ export default function PracticePage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
               ⏱ {formatTimer(secondsLeft)}
             </span>
@@ -594,7 +572,7 @@ export default function PracticePage() {
               onClick={() => setIsTimerRunning(!isTimerRunning)}
               style={{
                 fontSize: '10px',
-                padding: '2px 5px',
+                padding: '2px 6px',
                 borderRadius: '4px',
                 border: '1px solid #94a3b8',
                 backgroundColor: '#ffffff',
@@ -609,7 +587,7 @@ export default function PracticePage() {
           <Link
             href={`/dashboard${adminQuery}`}
             style={{
-              padding: '5px 10px',
+              padding: '4px 10px',
               backgroundColor: '#eff6ff',
               border: '1px solid #bfdbfe',
               borderRadius: '6px',
@@ -624,12 +602,12 @@ export default function PracticePage() {
         </div>
       </header>
 
-      {/* メインエリア */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 105px)', overflow: 'hidden' }}>
+      {/* 2ペインメイン作業エリア */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 104px)', overflow: 'hidden' }}>
         
         {/* 左ペイン */}
-        <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px' }}>
+        <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
             <button
               type="button"
               onClick={() => setActiveTab('problem')}
@@ -845,8 +823,8 @@ export default function PracticePage() {
         </section>
 
         {/* 右ペイン */}
-        <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ padding: '8px 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div style={{ height: '40px', padding: '0 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>✍️ 答案作成欄</span>
               <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -861,7 +839,7 @@ export default function PracticePage() {
               style={{
                 backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
                 color: '#ffffff',
-                padding: '5px 14px',
+                padding: '4px 12px',
                 borderRadius: '6px',
                 fontSize: '11px',
                 fontWeight: 'bold',
@@ -869,11 +847,11 @@ export default function PracticePage() {
                 cursor: isEvaluating ? 'not-allowed' : 'pointer',
               }}
             >
-              {isEvaluating ? '⏳ 考査委員が採点中...' : '🚀 答案提出・AI厳格採点'}
+              {isEvaluating ? '⏳ 採点中...' : '🚀 答案提出・AI厳格採点'}
             </button>
           </div>
 
-          <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex' }}>
+          <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex', overflow: 'hidden' }}>
             <textarea
               ref={textareaRef}
               value={userDraft}
