@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function POST(req: NextRequest) {
   try {
     const { userDraft, drillNotes, problemText, timeSpentSeconds, standardNorm, keyFacts } = await req.json();
@@ -54,17 +56,45 @@ ${userDraft}
 - 答案作成に直結する修正指示を1〜2点
 `;
 
-    // ★ gemini-3.8-flash を指定
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-    });
+    // 優先モデルと混雑時のフォールバック先モデル
+    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-pro'];
+    let lastError: unknown = null;
+    let feedbackText = '';
 
-    return NextResponse.json({ feedback: response.text });
+    // モデル順に最大2回ずつリトライ（503スパイク耐性）
+    for (const model of candidateModels) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: prompt,
+          });
+          if (response && response.text) {
+            feedbackText = response.text;
+            break;
+          }
+        } catch (err: unknown) {
+          lastError = err;
+          console.warn(`[採点API] モデル ${model} 試行 ${attempt} 失敗:`, err instanceof Error ? err.message : err);
+          if (attempt < 2) {
+            // 混雑時は1.5秒待機してからリトライ
+            await sleep(1500);
+          }
+        }
+      }
+      if (feedbackText) break;
+    }
+
+    if (!feedbackText) {
+      throw lastError || new Error('モデルから応答を受信できませんでした');
+    }
+
+    return NextResponse.json({ feedback: feedbackText });
   } catch (error: unknown) {
     console.error('AI採点エラー:', error);
+    const message = error instanceof Error ? error.message : '採点処理中にエラーが発生しました';
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '採点処理中にエラーが発生しました' },
+      { error: `現在AIモデルが混雑しています。数秒後に再度お試しください。（詳細: ${message}）` },
       { status: 500 }
     );
   }
