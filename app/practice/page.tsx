@@ -4,8 +4,16 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+type DrillGuideItem = {
+  title: string;
+  fatalMistakes: string[];
+  logicFramework: string[];
+  template: string;
+  defaultTemplate?: string;
+};
+
 // 全科目共通・考査委員の即死地雷チェック ＆ 思考フレームワーク定義
-const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: string[]; logicFramework: string[]; template: string }> = {
+const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
   '刑法': {
     title: '刑法：主犯先行・法的三段論法・共犯論の射程',
     fatalMistakes: [
@@ -98,7 +106,7 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
       '② 文書提出命令（220条4号ニ：作成目的・記載内容・開示不利益の総合考慮）',
       '③ 反訴と相殺の抗弁（重複起訴禁止142条、二重審理・既判力抵触のおそれ、予備的抗弁の構成）'
     ],
-    defaultTemplate: `第１ 設問１について（自己利用文書の該当性）\n１ 民事訴訟法220条4号ニの解釈規範\n２ 本件予測表の該当性（Yの反論とXの立論）\n\n第２ 設問２について（反訴における相殺の抗弁）\n１ 本訴未請求部分（2億円）の適法性\n２ 本訴請求部分（1億円）の適法性（142条類推適用の要否）`
+    template: `第１ 設問１について（自己利用文書の該当性）\n１ 民事訴訟法220条4号ニの解釈規範\n２ 本件予測表の該当性（Yの反論とXの立論）\n\n第２ 設問２について（反訴における相殺の抗弁）\n１ 本訴未請求部分（2億円）の適法性\n２ 本訴請求部分（1億円）の適法性（142条類推適用の要否）`
   },
   '刑事訴訟法': {
     title: '刑訴法：強制処分・令状主義・伝聞法則・訴因変更',
@@ -114,7 +122,7 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
       '③ 訴因変更（312条1項：公訴事実の同一性、日時・場所・行為態様の共通性）',
       '④ 判決（択一的認定の許容性・実質的重なり合い・軽い罪の限度での処断）'
     ],
-    defaultTemplate: `第１ 設問１について（予備的訴因追加の可否）\n１ 公訴事実の同一性（312条1項）の判断基準\n２ 本件への当てはめ（基本的事実関係の共通性）\n\n第２ 設問２について（客体の生死不明と択一的認定）\n１ 無罪推定の原則（疑わしきは被告人の利益に）\n２ 構成要件の実質的重なり合いと軽い罪の認定`
+    template: `第１ 設問１について（予備的訴因追加の可否）\n１ 公訴事実の同一性（312条1項）の判断基準\n２ 本件への当てはめ（基本的事実関係の共通性）\n\n第２ 設問２について（客体の生死不明と択一的認定）\n１ 無罪推定の原則（疑わしきは被告人の利益に）\n２ 構成要件の実質的重なり合いと軽い罪の認定`
   },
   '民事実務': {
     title: '民事実務：要件事実・二段の推定・民事保全',
@@ -281,7 +289,6 @@ export default function PracticePage() {
   const [activeTab, setActiveTab] = useState<'problem' | 'drill' | 'statute'>('problem');
   const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
   
-  // 制限時間を全科目一律「70分（4200秒）」
   const [secondsLeft, setSecondsLeft] = useState(70 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -471,13 +478,33 @@ export default function PracticePage() {
   return (
     <div style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif' }}>
       
-      {/* 最上部ヘッダー（論証アプリへ戻るボタンを新設） */}
-      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '20px' }}>⚖️</span>
+      {/* 最上部ヘッダー（左端に直通の戻るボタンを常設） */}
+      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* ★ 左端固定：論証アプリへの戻るボタン */}
+          <a
+            href="https://yobi-ronsho-app.vercel.app/"
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#f59e0b',
+              color: '#0f172a',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: '900',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(245,158,11,0.25)',
+              flexShrink: 0
+            }}
+          >
+            ← 📇 論証アプリ
+          </a>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
               <select
                 value={selectedSubjectFilter}
@@ -485,7 +512,7 @@ export default function PracticePage() {
                 style={{
                   fontSize: '12px',
                   fontWeight: 'bold',
-                  padding: '4px 8px',
+                  padding: '4px 6px',
                   borderRadius: '6px',
                   border: '1.5px solid #2563eb',
                   backgroundColor: '#eff6ff',
@@ -501,7 +528,7 @@ export default function PracticePage() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
               <select
                 value={selectedProblemId}
@@ -509,14 +536,14 @@ export default function PracticePage() {
                 style={{
                   fontSize: '12px',
                   fontWeight: 'bold',
-                  padding: '4px 8px',
+                  padding: '4px 6px',
                   borderRadius: '6px',
                   border: '1px solid #94a3b8',
                   backgroundColor: '#ffffff',
                   color: '#0f172a',
                   cursor: 'pointer',
                   outline: 'none',
-                  maxWidth: '300px'
+                  maxWidth: '260px'
                 }}
               >
                 {filteredProblems.map((p) => (
@@ -527,38 +554,14 @@ export default function PracticePage() {
               </select>
             </div>
 
-            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
-              {syncStatus === 'synced' ? '☁️ 保存済' : syncStatus === 'saving' ? '⏳ 同期中...' : '⚠️ オフライン'}
+            <span style={{ fontSize: '10px', padding: '2px 5px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
+              {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
             </span>
           </div>
         </div>
 
-        {/* 右側：論証アプリ戻るリンク・文字サイズ・タイマー・各画面リンク */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* ★ https://yobi-ronsho-app.vercel.app/ への戻るボタン */}
-          <a
-            href="https://yobi-ronsho-app.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: '5px 11px',
-              backgroundColor: '#fffbeb',
-              border: '1.5px solid #f59e0b',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              color: '#b45309',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 1px 2px rgba(245,158,11,0.15)'
-            }}
-          >
-            📇 論証アプリへ戻る
-          </a>
-
-          {/* 文字サイズ調整 */}
+        {/* 右側：文字サイズ・タイマー・履歴リンク */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -582,7 +585,6 @@ export default function PracticePage() {
             ))}
           </div>
 
-          {/* 70分タイマー */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '6px' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
               ⏱ {formatTimer(secondsLeft)}
