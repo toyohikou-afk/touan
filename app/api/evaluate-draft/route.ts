@@ -54,8 +54,9 @@ ${userDraft}
 - 答案作成に直結する修正指示を1〜2点
 `;
 
+    // ★ gemini-3.8-flash を指定
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
     });
 
