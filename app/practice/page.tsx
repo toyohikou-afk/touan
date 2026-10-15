@@ -50,7 +50,7 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
       '① 保護範囲（当該行為が憲法21条1項等のいかなる権利として保障されるか）',
       '② 制約の態様（直接的・事前的制約か、間接的・付随的制約か）',
       '③ 審査基準の定立（権利の重要性・制約態様の強度・パブリックフォーラム性）',
-      '④ 目的・手段の審査（目的の重大性・手段の必要最小限性・より緩やかな規制手段L-N-G-R）'
+      '④ 目的・手段の審査（目的の重大性・手段の必要最小限性・より緩やかな規制手段）'
     ],
     template: `第１ 原告の主張（制約の重大性・厳格な審査基準の定立）\n１ 保障と制約\n２ 法令違憲の主張（明確性の原則・過度の広汎性）\n３ 適用違憲の主張（明白な危険の欠如）\n\n第２ 被告（行政側）の反論\n\n第３ 私見（合憲性判断）`
   },
@@ -72,49 +72,49 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
   '商法': {
     title: '商法・会社法：機関権限・新株発行・役員責任',
     fatalMistakes: [
-      '取締役会決議と株主総会決議の権限分配（362条、206条の2等）の混同',
+      '取締役会決議と株主総会決議の権限分配の混同',
       '特別利害関係取締役（369条2項）の該当性と退席・定足数の検討漏れ',
       '確定した役員報酬（361条1項）の一方的減額における個別同意要件の看過',
-      '新株発行無効の訴え（828条1項2号）における瑕疵の重大性と取引の安全の比較衡量不足'
+      '新株発行無効の訴え（828条1項2号）における瑕疵の重大性と取引安全の衡量不足'
     ],
     logicFramework: [
-      '① 意思決定手続の適法性（取締役会・株主総会の招集通知・定足数・議決要件）',
+      '① 意思決定手続の適法性（招集通知・定足数・議決要件）',
       '② 特別利害関係（忠実義務違反の蓋然性・個人の地位剥奪）',
       '③ 支配権移転新株発行（206条の2、主要目的ルール、通知送達の悪意）',
       '④ 訴訟手段の選択（新株発行無効の訴え、役員報酬差額請求等）'
     ],
-    template: `第１ 設問１について\n１ 代表取締役解職決議の効力（会社法369条2項・特別利害関係）\n２ 役員報酬減額の有効性とAの請求（361条1項・具体的権利性）\n\n第２ 設問２について\n１ 新株発行無効の訴え（828条1項2号）の可否と無効事由（206条の2・招集通知瑕疵）`
+    template: `第１ 設問１について\n１ 代表取締役解職決議の効力（会社法369条2項・特別利害関係）\n２ 役員報酬減額の有効性とAの請求（361条1項・具体的権利性）\n\n第２ 設問２について\n１ 新株発行無効の訴え（828条1項2号）の可否と無効事由`
   },
   '民事訴訟法': {
     title: '民訴法：訴訟物・自己利用文書・重複起訴・既判力',
     fatalMistakes: [
-      '自己利用文書（220条4号ニ）を単に「社外秘だから」と結論付ける（作成目的・開示不利益を要検討）',
+      '自己利用文書（220条4号ニ）を単に社外秘だからと結論付ける',
       '一部請求本訴係属中の反訴相殺における142条重複起訴の論証抜け',
       '既判力の客観的範囲（114条1項・2項）と争点効・信義則の混同',
       '処分権主義・弁論主義の第1・第2・第3テーゼの適用の誤り'
     ],
     logicFramework: [
       '① 訴訟物の特定と審判対象の画定（一部請求の許容性と残部請求）',
-      '② 文書提出命令（220条4号ニ：作成目的・記載内容・開示による不利益の総合考慮）',
+      '② 文書提出命令（220条4号ニ：作成目的・記載内容・開示不利益の総合考慮）',
       '③ 反訴と相殺の抗弁（重複起訴禁止142条、二重審理・既判力抵触のおそれ、予備的抗弁の構成）'
     ],
-    template: `第１ 設問１について（自己利用文書の該当性）\n１ 民事訴訟法220条4号ニの解釈規範\n２ 本件予測表の該当性（Yの反論とXの立論）\n\n第２ 設問２について（反訴における相殺の抗弁）\n１ 本訴未請求部分（2億円）の適法性\n２ 本訴請求部分（1億円）の適法性（142条類推適用の要否・併合審理の意義）`
+    defaultTemplate: `第１ 設問１について（自己利用文書の該当性）\n１ 民事訴訟法220条4号ニの解釈規範\n２ 本件予測表の該当性（Yの反論とXの立論）\n\n第２ 設問２について（反訴における相殺の抗弁）\n１ 本訴未請求部分（2億円）の適法性\n２ 本訴請求部分（1億円）の適法性（142条類推適用の要否）`
   },
   '刑事訴訟法': {
     title: '刑訴法：強制処分・令状主義・伝聞法則・訴因変更',
     fatalMistakes: [
-      '伝聞証拠（320条1項）の要証事実を誤って「非伝聞」を「伝聞」と判定する',
+      '伝聞証拠（320条1項）の要証事実を誤って非伝聞を伝聞と判定する',
       '写真撮影報告書の電磁的記録の機械的正確性（原本性・同一性）の立証を抜かす',
-      '訴因変更の限界（312条1項）で「基本的事実関係の同一性」の二段階基準を飛ばす',
+      '訴因変更の限界（312条1項）で基本的事実関係の同一性の二段階基準を飛ばす',
       '客体の生死不明時における択一的認定と無罪推定（利益原則）の調和論証不足'
     ],
     logicFramework: [
-      '① 捜査手続の適法性（任意捜査の限界・強制処分の法定主義・令状主義）',
-      '② 証拠能力（伝聞法則320条：公判外供述・要証事実との関係・非伝聞［言語的行為］、321条例外）',
+      '① 捜査手続の適法性（任意捜査の限界・強制処分法定主義・令状主義）',
+      '② 証拠能力（伝聞法則320条：公判外供述・要証事実・言語的行為、321条例外）',
       '③ 訴因変更（312条1項：公訴事実の同一性、日時・場所・行為態様の共通性）',
       '④ 判決（択一的認定の許容性・実質的重なり合い・軽い罪の限度での処断）'
     ],
-    template: `第１ 設問１について（予備的訴因追加の可否）\n１ 公訴事実の同一性（312条1項）の判断基準\n２ 本件への当てはめ（基本的事実関係の共通性）\n\n第２ 設問２について（客体の生死不明と択一的認定）\n１ 無罪推定の原則（疑わしきは被告人の利益に）\n２ 構成要件の実質的重なり合いと軽い罪の認定（刑法190条死体遺棄罪の成立）`
+    defaultTemplate: `第１ 設問１について（予備的訴因追加の可否）\n１ 公訴事実の同一性（312条1項）の判断基準\n２ 本件への当てはめ（基本的事実関係の共通性）\n\n第２ 設問２について（客体の生死不明と択一的認定）\n１ 無罪推定の原則（疑わしきは被告人の利益に）\n２ 構成要件の実質的重なり合いと軽い罪の認定`
   },
   '民事実務': {
     title: '民事実務：要件事実・二段の推定・民事保全',
@@ -135,14 +135,14 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
   '刑事実務': {
     title: '刑事実務：故意・共謀の事実認定・証拠法・共犯の既遂時期',
     fatalMistakes: [
-      '詐欺の故意で「積極事実」と「消極事実」を対比せずに単一方向のみ述べる',
-      '客観的証拠（ICカード・領収書）による供述変遷・外堀の固定プロセスを看過する',
-      '事件単位の原則に基づく「起訴後余罪取調べ受忍義務の否定」の条文根拠欠落',
-      '詐欺の既遂時期（受領時）とコインロッカー回収役（A2）の承継的共同正犯の先後関係の誤認'
+      '詐欺の故意で積極事実と消極事実を対比せずに単一方向のみ述べる',
+      '客観的証拠（ICカード・領収書）による供述変遷・外堀固定のプロセスを看過する',
+      '事件単位の原則に基づく起訴後余罪取調べ受忍義務否定の条文根拠欠落',
+      '詐欺の既遂時期（受領時）と回収役の承継的共同正犯の先後関係の誤認'
     ],
     logicFramework: [
       '① 犯人性・客観的証拠（ICカード・領収書等による否認供述弾劾）',
-      '② 故意の事実認定（積極事実：高額報酬・架空身分・違法性疑念 vs 消極事実：気休め言葉・本名開示）',
+      '② 故意の事実認定（積極事実 vs 消極事実）',
       '③ 取調べ受忍義務（余罪に対する勾留効力の不及び・起訴後当事者対立構造）',
       '④ 証拠法（スマホDM写真の非伝聞性・立証趣旨限定・原本性立証）',
       '⑤ 共犯の既遂時期と承継的共同正犯（既遂後の盗品等運搬罪256条2項）'
@@ -163,7 +163,7 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
       '③ 必要経費（37条、51条4項：解体費用の不動産所得性）',
       '④ 資産損失（51条1項、施行令142条1号：簿価の損失算入と損益通算69条）'
     ],
-    template: `第１ 設問１について（A社の法人税所得計算・法人税法22条）\n\n第２ 設問２について（所得の人的帰属・所得税法12条）\n１ 人的帰属の原則：\n２ Cの主張（法律的帰属説）：\n３ 税務署長の主張（経済的帰属・実質支配説）：\n\n第３ 設問３について（解体費用及び資産損失の計算）\n１ 解体費用300万円の必要経費算入：\n２ 建物取壊しの資産損失（簿価850万円）と損益通算：`
+    template: `第１ 設問１について（A社の法人税所得計算・法人税法22条）\n\n第２ 設問２について（所得の人的帰属・所得税法12条）\n１ 人的帰属の原則：\n２ Cの主張（法律的帰属説）：\n３ 税務署長の主張（経済的帰属・実質支配説）：\n\n第３ 設問３について（解体費用及び資産損失の計算）`
   },
   '経済法': {
     title: '経済法：不当な取引制限・意思の連絡・官製談合・競争の実質的制限',
@@ -181,65 +181,17 @@ const SUBJECT_DRILL_GUIDES: Record<string, { title: string; fatalMistakes: strin
       '⑤ 公共の利益に反して（実質的違法性阻却事由の不存在）',
       '⑥ 発注者関与（官製談合）の評価と事業者の法的責任'
     ],
-    template: `第１ ２社の行為と不当な取引制限（独占禁止法2条6項、3条後段）の成否\n１ 「事業者」該当性（2条1項）\n２ 「共同して」（意思の連絡の認定）\n３ 「相互にその事業活動を拘束」\n４ 「一定の取引分野における競争を実質的に制限」\n ア 市場画定：\n イ 競争の実質的制限の規範及び当てはめ：\n５ 発注者Aの関与（官製談合）と２社の責任\n６ 一般競争入札への反対要請の評価`
+    template: `第１ ２社の行為と不当な取引制限（独占禁止法2条6項、3条後段）の成否\n１ 「事業者」該当性（2条1項）\n２ 「共同して」（意思の連絡の認定）\n３ 「相互にその事業活動を拘束」\n４ 「一定の取引分野における競争を実質的に制限」\n５ 発注者Aの関与（官製談合）と２社の責任`
   }
 };
 
 const MASTER_STATUTES = [
-  // 憲法・行政法
-  { law: '憲法', num: '第13条', title: '個人の尊重・幸福追求権', text: 'すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。' },
-  { law: '憲法', num: '第14条', title: '法の下の平等', text: 'すべて国民は、法の下に平等であって、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。' },
   { law: '憲法', num: '第21条', title: '表現の自由', text: '1 集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。\n2 検閲は、これをしてはならない。通信の秘密は、これを侵してはならない。' },
-  { law: '憲法', num: '第31条', title: '適正手続の保障', text: '何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。' },
-  { law: '行政事件訴訟法', num: '第3条', title: '抗告訴訟', text: '2 この法律において「処分の取消しの訴え」とは、行政庁の処分その他公権力の行使に当たる行為の取消しを求める訴訟をいう。' },
-  { law: '行政事件訴訟法', num: '第9条', title: '原告適格', text: '1 処分の取消しの訴え及び裁決の取消しの訴えは、当該処分又は裁決の取消しを求めるにつき法律上の利益を有する者に限り、提起することができる。' },
-  { law: '行政事件訴訟法', num: '第30条', title: '裁量処分の取消し', text: '行政庁の裁量に属する処分については、裁量権の範囲をこえ又はその濫用があつた場合に限り、裁判所は、その処分を取り消すことができる。' },
-  { law: '地方自治法', num: '第244条', title: '公の施設', text: '1 普通地方公共団体は、住民の福祉を増進する目的をもつてその利用に供するための施設（これを公の施設という。）を設けるものとする。\n2 普通地方公共団体は、正当な理由がない限り、住民が公の施設を利用することを拒んではならない。' },
-
-  // 民事系
-  { law: '民法', num: '第93条', title: '心裡留保', text: '意思表示は、表意者がその真意ではないことを知ってしたときであっても、そのためにその効力を妨げられない。ただし、相手方がその意思表示が表意者の真意ではないことを知り、又は知ることができたときは、その意思表示は、無効とする。' },
-  { law: '民法', num: '第94条', title: '通謀虚偽表示', text: '1 相手方と通じてした虚偽の意思表示は、無効とする。\n2 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
-  { law: '民法', num: '第392条', title: '共同抵当の配当', text: '2 債権者が特定の不動産の代価のみから弁済を受けたときは、その不動産より後順位の抵当権者は、前項の規定に基づき他の不動産の代価から弁済を受けることができた額の限度において、その抵当権者に代位して抵当権を行使することができる。' },
-  { law: '民法', num: '第467条', title: '指名債権の譲渡の対抗要件', text: '1 指名債権の譲渡は、譲渡人が債務者に通知をし、又は債務者が承諾をしなければ、債務者その他の第三者に対抗することができない。' },
   { law: '民法', num: '第482条', title: '代物弁済', text: '債務者が、債権者の承諾を得て、その負担した給付に代えて他の給付をしたときは、その給付は、弁済と同一の効力を有する。' },
-  { law: '民法', num: '第501条', title: '弁済による代位の効果', text: '1 弁済による代位をした者は、債権の効力及び担保としてその債権者が有していた一切の権利を行使することができる。' },
-  { law: '民法', num: '第511条', title: '差押えを受けた債権の相殺', text: '2 差押えを受けた債権の第三債務者は、差押え後に取得した債権による相殺をもつて差押債権者に対抗することはできないが、差押え前の原因に基づいて生じた債権による相殺をもつて対抗することができる。' },
-  { law: '民法', num: '第613条', title: '転貸の効果', text: '3 賃貸人が賃借人と協議の上、賃貸借を解除したときは、賃貸人は、転借人に対してその解除の効力を主張することができない。ただし、その解除の当時、賃貸人が賃借人の債務不履行による解除権を有していたときは、この限りでない。' },
-  { law: '民法', num: '第709条', title: '不法行為による損害賠償', text: '故意又は過失によって他人の権利又は法律上保護される利益を侵害した者は、これによって生じた損害を賠償する責任を負う。' },
-  { law: '商法・会社法', num: '第362条', title: '取締役会の権限等', text: '2 取締役会は、次に掲げる職務を行う。\n三 代表取締役の選定及び解職' },
-  { law: '商法・会社法', num: '第369条', title: '取締役会の決議', text: '2 前項の決議について特別の利害関係を有する取締役は、議決に加わることができない。' },
-  { law: '商法・会社法', num: '第361条', title: '取締役の報酬等', text: '1 取締役が受ける報酬、賞与その他の職務執行の対価として会社から受ける財産上の利益についての事項は、定款に定めていないときは、株主総会の決議によつて定める。' },
-  { law: '商法・会社法', num: '第206条の2', title: '支配株主の異動を伴う新株発行', text: '4 株式会社は、総株主の議決権の10分の1以上の議決権を有する株主が募集株式の割当て等に反対する旨を通知したときは、払込期日の前日までに株主総会の決議によつて承認を受けなければならない。' },
-  { law: '民事訴訟法', num: '第142条', title: '重複起訴の禁止', text: '裁判所に係属する事件については、当事者は、更に訴えを提起することができない。' },
-  { law: '民事訴訟法', num: '第220条', title: '文書提出義務', text: '四 次に掲げる文書のいずれにも該当しないとき。\nニ 専ら文書の所持者の利用に供するための文書' },
-  { law: '民事訴訟法', num: '第228条', title: '文書の成立', text: '4 私文書は、本人又はその代理人の署名又は押印があるときは、真正に成立したものと推定する。' },
-  { law: '民事保全法', num: '第23条', title: '仮処分の必要性等', text: '1 係争物に関する仮処分命令は、現状の変更により、当事者が権利を実行することができなくなるおそれがあるとき、又はこれについて著しい困難を生ずるおそれがあるときに発することができる。' },
-
-  // 刑事系
-  { law: '刑法', num: '第38条', title: '故意', text: '1 罪を犯す意思がない行為は、罰しない。ただし、法律に特別の規定がある場合は、この限りでない。' },
-  { law: '刑法', num: '第43条', title: '未遂減免・中止犯', text: '犯罪の実行に着手してこれを遂げなかった者は、未遂罪として処断することができる。ただし、自己の意思により犯罪を中止したときは、その刑を減軽し、又は免除する。' },
   { law: '刑法', num: '第60条', title: '共同正犯', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
-  { law: '刑法', num: '第190条', title: '死体損壊・遺棄', text: '死体、遺骨、遺髪又は棺に納めてある物を損壊し、遺棄し、又は領得した者は、三年以下の懲役に処する。' },
-  { law: '刑法', num: '第199条', title: '殺人', text: '人を殺した者は、死刑又は無期若しくは五年以上の懲役に処する。' },
-  { law: '刑法', num: '第210条', title: '過失致死', text: '過失により人を死亡させた者は、五十万円以下の罰金に処する。' },
-  { law: '刑法', num: '第218条', title: '保護責任者遺棄等', text: '老年者、幼年者、身体障害者又は病者を保護する責任のある者がこれらの者を遺棄し、又はその生存に必要な保護をしなかったときは、三月以上五年以下の懲役に処する。' },
-  { law: '刑法', num: '第235条', title: '窃盗', text: '他人の財物を窃取した者は、窃盗の罪とし、十年以下の懲役又は五十万円以下の罰金に処する。' },
-  { law: '刑法', num: '第236条', title: '強盗', text: '1 暴行又は脅迫を用いて他人の財物を強取した者は、強盗の罪とし、五年以上の有期懲役に処する。\n2 前項の方法により、財産上不法の利益を得、又は他人にこれを得させた者も、同項と同様とする。' },
   { law: '刑法', num: '第240条', title: '強盗致死傷', text: '強盗が、人を負傷させたときは無期又は六年以上の懲役に処し、死亡させたときは死刑又は無期懲役に処する。' },
-  { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。\n2 前項の方法により、財産上不法の利益を得、又は他人にこれを得させた者も、同項と同様とする。' },
-  { law: '刑法', num: '第252条', title: '横領', text: '自己の占有する他人の物を横領した者は、五年以下の懲役に処する。' },
-  { law: '刑法', num: '第256条', title: '盗品等関与', text: '2 盗品その他財産に対する罪に当たる行為によって領得された物を運搬し、保管し、若しくは有償で譲り受け、又はその有償の処分のあっせんをした者は、十年以下の懲役及び五十万円以下の罰金に処する。' },
-  { law: '刑事訴訟法', num: '第198条', title: '被疑者の取調べ', text: '1 検察官、検察事務官又は司法警察職員は、犯罪の捜査をするについて必要があるときは、被疑者の出頭を求め、これを取り調べることができる。但し、被疑者は、逮捕又は勾留されている場合を除いては、出頭を拒み、又は出頭後、何時でも退去することができる。' },
-  { law: '刑事訴訟法', num: '第312条', title: '訴因又は罰条の変更', text: '1 裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、訴因又は罰条の追加、撤回又は変更を許さなければならない。' },
-  { law: '刑事訴訟法', num: '第320条', title: '伝聞証拠の排除', text: '1 第321条乃至第328条に規定する場合を除いては、公判期日における供述に代へて書面を証拠とし、又は公判期日外における他の者の供述を内容とする供述を証拠とすることはできない。' },
-
-  // 選択科目（租税法・経済法）
-  { law: '法人税法', num: '第22条', title: '各事業年度の所得の金額の計算', text: '2 益金の額に算入すべき金額は、別段の定めがあるものを除き、資産の譲渡、有償又は無償による役務の提供、無償による資産の譲受けその他の取引に係る収益の額とする。' },
-  { law: '所得税法', num: '第12条', title: '実質所得者課税の原則', text: '資産又は事業から生ずる収益の法律上帰属するとみられる者が単なる名義人であつて、その収益を享受せず、その者以外の者がその収益を享受する場合には、その収益は、これを実質的に享受する者に帰属するものとして、この法律の規定を適用する。' },
-  { law: '独占禁止法', num: '第1条', title: '目的', text: 'この法律は、私的独占、不当な取引制限及び不公正な取引方法を禁止し、事業支配力の過度の集中を防止して、公正且つ自由な競争を促進することを目的とする。' },
-  { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' },
-  { law: '独占禁止法', num: '第3条', title: '私的独占又は不当な取引制限の禁止', text: '事業者は、私的独占又は不当な取引制限をしてはならない。' },
-  { law: '独占禁止法', num: '第7条の2', title: '課徴金納付命令', text: '1 事業者が、不当な取引制限をしたときは、公正取引委員会は、当該事業者に対し、課徴金を国庫に納付することを命じなければならない。' }
+  { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。' },
+  { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' }
 ];
 
 type ProblemType = {
@@ -329,7 +281,7 @@ export default function PracticePage() {
   const [activeTab, setActiveTab] = useState<'problem' | 'drill' | 'statute'>('problem');
   const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
   
-  // ★ 制限時間を全科目一律で「70分（4200秒）」に固定
+  // 制限時間を全科目一律「70分（4200秒）」
   const [secondsLeft, setSecondsLeft] = useState(70 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -355,7 +307,6 @@ export default function PracticePage() {
     try {
       const { data, error } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        // ★ 全問一律70分として適用
         const normalizedData = data.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
         const merged = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
         setProblems(merged);
@@ -370,7 +321,6 @@ export default function PracticePage() {
     }
   };
 
-  // クラウド下書き自動取得（どこでも再開）
   const loadDraftFromCloud = async (probId: string) => {
     try {
       const { data } = await supabase.from('practice_drafts').select('*').eq('problem_id', probId).single();
@@ -384,7 +334,6 @@ export default function PracticePage() {
     }
   };
 
-  // クラウド自動保存（デバウンス同期）
   const triggerAutoSave = (draft: string, notes: string, sec: number) => {
     setSyncStatus('saving');
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
@@ -414,7 +363,6 @@ export default function PracticePage() {
     triggerAutoSave(userDraft, text, secondsLeft);
   };
 
-  // ドリルから答案欄への骨子転送
   const handleInsertDrillToDraft = () => {
     const drill = SUBJECT_DRILL_GUIDES[currentProblem.subject] || SUBJECT_DRILL_GUIDES['刑法'];
     const insertText = drillNotes.trim() ? drillNotes : drill.template;
@@ -444,7 +392,7 @@ export default function PracticePage() {
     setUserDraft('');
     setDrillNotes('');
     setAiFeedback(null);
-    setSecondsLeft(70 * 60); // ★ 70分リセット
+    setSecondsLeft(70 * 60);
     setIsTimerRunning(false);
     setActiveTab('problem');
     loadDraftFromCloud(targetId);
@@ -523,13 +471,12 @@ export default function PracticePage() {
   return (
     <div style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif' }}>
       
-      {/* 最上部ヘッダー */}
+      {/* 最上部ヘッダー（論証アプリへ戻るボタンを新設） */}
       <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '20px' }}>⚖️</span>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {/* 科目プルダウン */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
               <select
@@ -554,7 +501,6 @@ export default function PracticePage() {
               </select>
             </div>
 
-            {/* 問題プルダウン */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
               <select
@@ -570,7 +516,7 @@ export default function PracticePage() {
                   color: '#0f172a',
                   cursor: 'pointer',
                   outline: 'none',
-                  maxWidth: '320px'
+                  maxWidth: '300px'
                 }}
               >
                 {filteredProblems.map((p) => (
@@ -581,15 +527,38 @@ export default function PracticePage() {
               </select>
             </div>
 
-            {/* クラウド同期ステータス */}
             <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
-              {syncStatus === 'synced' ? '☁️ クラウド自動保存済' : syncStatus === 'saving' ? '⏳ 同期中...' : '⚠️ オフライン'}
+              {syncStatus === 'synced' ? '☁️ 保存済' : syncStatus === 'saving' ? '⏳ 同期中...' : '⚠️ オフライン'}
             </span>
           </div>
         </div>
 
-        {/* 右側：文字サイズ・70分タイマー・各画面リンク */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* 右側：論証アプリ戻るリンク・文字サイズ・タイマー・各画面リンク */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* ★ https://yobi-ronsho-app.vercel.app/ への戻るボタン */}
+          <a
+            href="https://yobi-ronsho-app.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '5px 11px',
+              backgroundColor: '#fffbeb',
+              border: '1.5px solid #f59e0b',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              color: '#b45309',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(245,158,11,0.15)'
+            }}
+          >
+            📇 論証アプリへ戻る
+          </a>
+
+          {/* 文字サイズ調整 */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -613,7 +582,7 @@ export default function PracticePage() {
             ))}
           </div>
 
-          {/* ★ 一律70分タイマー */}
+          {/* 70分タイマー */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '6px' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
               ⏱ {formatTimer(secondsLeft)}
@@ -656,7 +625,7 @@ export default function PracticePage() {
       {/* メインエリア */}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 105px)', overflow: 'hidden' }}>
         
-        {/* 左ペイン：事実設問 / 全科目起案ドリル / 電子六法 */}
+        {/* 左ペイン */}
         <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px' }}>
             <button
@@ -710,15 +679,12 @@ export default function PracticePage() {
           </div>
 
           <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
-            
-            {/* タブ1: 事実・設問 */}
             {activeTab === 'problem' && (
               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
                 {currentProblem.fact_context}
               </div>
             )}
 
-            {/* タブ2: 全科目起案ドリル ＆ 構成検討 */}
             {activeTab === 'drill' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
@@ -738,7 +704,6 @@ export default function PracticePage() {
                         borderRadius: '6px',
                         border: 'none',
                         cursor: 'pointer',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                       }}
                     >
                       👉 答案欄に骨子を転送
@@ -749,7 +714,6 @@ export default function PracticePage() {
                   </p>
                 </div>
 
-                {/* 即死地雷チェックリスト */}
                 <div style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '12px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#9f1239', marginBottom: '6px' }}>
                     🚨 考査委員の即死地雷（致命的減点項目）
@@ -761,7 +725,6 @@ export default function PracticePage() {
                   </ul>
                 </div>
 
-                {/* 法的三段論法・要件事実フレームワーク */}
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>
                     📐 答案思考フレームワーク
@@ -773,7 +736,6 @@ export default function PracticePage() {
                   </div>
                 </div>
 
-                {/* 答案構成・ドリルメモ */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>
@@ -790,7 +752,7 @@ export default function PracticePage() {
                   <textarea
                     value={drillNotes}
                     onChange={(e) => handleDrillNotesChange(e.target.value)}
-                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。&#10;ボタン1つで右側の答案作成欄へ流し込めます。"
+                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。"
                     style={{
                       width: '100%',
                       height: '200px',
@@ -808,7 +770,6 @@ export default function PracticePage() {
               </div>
             )}
 
-            {/* タブ3: 電子六法 */}
             {activeTab === 'statute' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -881,7 +842,7 @@ export default function PracticePage() {
           </div>
         </section>
 
-        {/* 右ペイン：答案作成エディタ ＆ AI厳格採点 */}
+        {/* 右ペイン */}
         <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ padding: '8px 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -915,7 +876,7 @@ export default function PracticePage() {
               ref={textareaRef}
               value={userDraft}
               onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={`【${currentProblem.target_issue}】の答案を作成してください。\n\n左ペインの「📝 全科目起案ドリル」で構成を整理し、「👉 答案欄に骨子を転送」を押すとテンプレや構成メモがここに反映されます。\n\n入力内容はクラウドへ自動保存されるため、出先やスマホからでも続きから再開できます。`}
+              placeholder={`【${currentProblem.target_issue}】の答案を作成してください。`}
               style={{
                 width: '100%',
                 height: '100%',
