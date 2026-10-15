@@ -1,20 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import type { Metadata } from 'next';
+import './globals.css';
+import { Navbar } from '../components/Navbar';
 
 export const metadata: Metadata = {
-  title: "予備試験・司法試験 CBT起案システム",
-  description: "CBT実戦起案・合格思考アシストシステム",
+  title: '予備試験・司法試験 刑法ラボ',
+  description: '答案直結の論点暗記カード & 実戦起案ドリル',
 };
 
 export default function RootLayout({
@@ -23,9 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen bg-slate-100 text-slate-900 antialiased flex flex-col">
-        {children}
+    <html lang="ja">
+      <body className="bg-slate-100 min-h-screen antialiased">
+        <Navbar />
+        <main>{children}</main>
       </body>
     </html>
   );

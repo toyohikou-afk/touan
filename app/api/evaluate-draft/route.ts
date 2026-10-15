@@ -1,107 +1,71 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { userDraft, problemText, timeSpentSeconds, standardNorm, keyFacts } = body;
-
-    if (!userDraft || userDraft.trim() === '') {
-      return NextResponse.json(
-        { error: '答案本文が空です。' },
-        { status: 400 }
-      );
-    }
-
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-      return NextResponse.json({
-        subject: '民法',
-        target_issue: '民法総合',
-        feedback: `【システム簡易講評（APIキー未設定）】\n\n・文字数：${userDraft.length} 字\n・所要時間：${Math.floor((timeSpentSeconds || 0) / 60)} 分 ${(timeSpentSeconds || 0) % 60} 秒`,
-      });
+      return NextResponse.json({ error: 'GEMINI_API_KEY が未設定です。' }, { status: 500 });
     }
 
-    const prompt = `あなたは司法試験・予備試験の考査委員・実務家採点者です。
-受験生の答案および問題文から「科目」と「主たる論点」を正確に特定し、厳格な採点・添削を行ってください。
+    const { userDraft, problemText, timeSpentSeconds, standardNorm, keyFacts } = await req.json();
 
-【問題文（参考）】
-${problemText || 'なし'}
-
-【受験生の起案答案】
-${userDraft}
-
-【基準規範・参考情報】
-${standardNorm || '答案から自動判定'}
-
-【タスク】
-1. 科目を「憲法」「行政法」「民法」「商法」「民事訴訟法」「刑法」「刑事訴訟法」等から1つ判定。
-2. 主たる論点（例:「共犯からの離脱」「94条2項110条類推適用」等）を端的に抽出。
-3. 規範定立（判例基準）、事実の抽出と法的評価、三段論法を厳格に採点。
-
-必ず以下のJSONフォーマットのみを出力してください（Markdownコードブロックは不要）：
-{
-  "subject": "判定した科目名",
-  "target_issue": "判定した論点名",
-  "feedback": "【総合評価】...\\n\\n【第１：規範定立の評価】...\\n\\n【第２：事実のあてはめの評価】...\\n\\n【第３：三段論法・形式面の講評】...\\n\\n【次回に向けた改善ポイント】..."
-}`;
-
-    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-
-    let responseText = '';
-    let lastError: any = null;
-
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-        });
-
-        if (response.text) {
-          responseText = response.text;
-          break;
-        }
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`Attempt ${attempt} failed:`, err.message);
-        if (attempt < 3) {
-          await new Promise((res) => setTimeout(res, 1500));
-        }
-      }
+    if (!userDraft || !userDraft.trim()) {
+      return NextResponse.json({ error: '答案が入力されていません。' }, { status: 400 });
     }
 
-    if (!responseText) {
-      throw lastError || new Error('採点生成に失敗しました。');
-    }
+    const systemPrompt = `あなたは予備試験・司法試験刑法論文の考査委員です。
+本番CBTで提出された答案を、厳格な法的三段論法・判例の規範定立・当てはめ基準に照らして容赦なく採点・添削してください。
 
-    // JSONパース（Markdown表記除去を含む安全設計）
-    let cleanJson = responseText.trim();
-    if (cleanJson.startsWith('```json')) cleanJson = cleanJson.slice(7);
-    if (cleanJson.startsWith('```')) cleanJson = cleanJson.slice(3);
-    if (cleanJson.endsWith('```')) cleanJson = cleanJson.slice(0, -3);
+【採点基準・審査項目】
+1. 判例規範の定立:
+   - 抽象論を並べるだけでなく、当該論点の判例が示す規範（因果性の遮断、反抗抑圧の利用等）が正確・簡潔に定立されているか。
+2. 事実の摘示と評価（当てはめ）:
+   - 問題文の具体的生事実（凶器の提供、離脱の拒絶、心理的・物理的因果性の残存等）を拾い、規範の要件に即して実質的に評価しているか。
+   - 単なる事実の引き写し（事実の羅列）に終わっていないか。
+3. 罪責の検討順序:
+   - 実行正犯（乙）から客観的構成要件該当性を確定させ、その後に共犯者（甲）の罪責を論ずる論理的一貫性が保たれているか。
 
-    let parsedResult: any = {};
-    try {
-      parsedResult = JSON.parse(cleanJson);
-    } catch {
-      parsedResult = {
-        subject: '判定中',
-        target_issue: '論点分析',
-        feedback: responseText,
-      };
-    }
+【講評の出力構成】
+## 総合判定（得点目安: 0〜50点 / 推定ランク: A〜F）
+## 1. 致命的欠陥・地雷の検知（あれば厳しく指摘）
+## 2. 判例規範の定立度チェック
+## 3. 事実の評価と当てはめの深さ
+## 4. 考査委員からの直言・合格水準への処方箋`;
 
-    return NextResponse.json({
-      subject: parsedResult.subject || '法律総合',
-      target_issue: parsedResult.target_issue || '総合問題',
-      feedback: parsedResult.feedback || responseText,
+    const userPrompt = `【問題・事実関係】
+${problemText}
+
+【基準となる判例規範】
+${standardNorm || '共犯関係からの離脱における物理的・心理的因果性の遮断'}
+
+【答案で拾うべきキーファクト】
+${JSON.stringify(keyFacts || [])}
+
+【受験生答案（起案時間: 約 ${Math.floor((timeSpentSeconds || 0) / 60)} 分）】
+${userDraft}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+        ],
+        generationConfig: { temperature: 0.2 }
+      })
     });
-  } catch (error: any) {
-    console.error('API Route Exception:', error);
-    return NextResponse.json({
-      feedback: `【採点処理エラー】\n${error.message || '予期せぬエラーが発生しました。'}`,
-    });
+
+    if (!res.ok) {
+      throw new Error(`Gemini API エラー: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '講評を生成できませんでした。';
+
+    return NextResponse.json({ feedback });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
