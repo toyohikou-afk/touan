@@ -1,71 +1,70 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const { userDraft, drillNotes, problemText, timeSpentSeconds, standardNorm, keyFacts } = await req.json();
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY が未設定です。' }, { status: 500 });
+      return NextResponse.json({ error: 'GEMINI_API_KEY が未設定です' }, { status: 500 });
     }
 
-    const { userDraft, problemText, timeSpentSeconds, standardNorm, keyFacts } = await req.json();
+    const ai = new GoogleGenAI({ apiKey });
 
-    if (!userDraft || !userDraft.trim()) {
-      return NextResponse.json({ error: '答案が入力されていません。' }, { status: 400 });
-    }
+    const prompt = `あなたは司法試験・予備試験の論文式試験における厳格な考査委員（採点官）です。
+受験生が起案した以下の【答案本文】、および起案時に作成された【答案構成メモ】を厳格に採点・講評してください。
 
-    const systemPrompt = `あなたは予備試験・司法試験刑法論文の考査委員です。
-本番CBTで提出された答案を、厳格な法的三段論法・判例の規範定立・当てはめ基準に照らして容赦なく採点・添削してください。
+【問題文（事実・設問）】
+${problemText || '記載なし'}
 
-【採点基準・審査項目】
-1. 判例規範の定立:
-   - 抽象論を並べるだけでなく、当該論点の判例が示す規範（因果性の遮断、反抗抑圧の利用等）が正確・簡潔に定立されているか。
-2. 事実の摘示と評価（当てはめ）:
-   - 問題文の具体的生事実（凶器の提供、離脱の拒絶、心理的・物理的因果性の残存等）を拾い、規範の要件に即して実質的に評価しているか。
-   - 単なる事実の引き写し（事実の羅列）に終わっていないか。
-3. 罪責の検討順序:
-   - 実行正犯（乙）から客観的構成要件該当性を確定させ、その後に共犯者（甲）の罪責を論ずる論理的一貫性が保たれているか。
+【出題の趣旨・判例の規範定立】
+${standardNorm || '記載なし'}
 
-【講評の出力構成】
-## 総合判定（得点目安: 0〜50点 / 推定ランク: A〜F）
-## 1. 致命的欠陥・地雷の検知（あれば厳しく指摘）
-## 2. 判例規範の定立度チェック
-## 3. 事実の評価と当てはめの深さ
-## 4. 考査委員からの直言・合格水準への処方箋`;
+【拾うべき生事実・考慮要素】
+${Array.isArray(keyFacts) ? keyFacts.join('\n') : (keyFacts || '記載なし')}
 
-    const userPrompt = `【問題・事実関係】
-${problemText}
+【起案にかかった時間】
+${timeSpentSeconds ? `${Math.floor(timeSpentSeconds / 60)}分${timeSpentSeconds % 60}秒` : '不明'}
 
-【基準となる判例規範】
-${standardNorm || '共犯関係からの離脱における物理的・心理的因果性の遮断'}
+【答案構成メモ（起案前ドリル）】
+${drillNotes ? drillNotes : '（構成メモなし）'}
 
-【答案で拾うべきキーファクト】
-${JSON.stringify(keyFacts || [])}
+【作成された答案本文】
+${userDraft}
 
-【受験生答案（起案時間: 約 ${Math.floor((timeSpentSeconds || 0) / 60)} 分）】
-${userDraft}`;
+---
+以下の構成で、答案作成に直結する具体的かつ実践的な講評を作成してください：
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
-        ],
-        generationConfig: { temperature: 0.2 }
-      })
+### 1. 得点判定・総合評価
+- 予想得点（70点満点換算）
+- 合否水準（優秀 / 合格ライン / 不合格）
+
+### 2. 答案構成・思考枠組みの評価（構成メモの補完チェック）
+- 検討順序の妥当性（例: 主犯先行、訴訟要件→本案、三段階審査等の遵守）
+- 考査委員の即死地雷（致命的減点項目）を踏んでいないか
+
+### 3. 判例規範の定立と理由づけ
+- 規範のキーワードが正確か、論証の論理的飛躍がないか
+
+### 4. 具体的事実の当てはめ・評価
+- 問題文の生事実を過不足なく拾い、評価を加えているか
+
+### 5. 次回に向けた具体的な改善ポイント
+- 答案作成に直結する修正指示を1〜2点
+`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
 
-    if (!res.ok) {
-      throw new Error(`Gemini API エラー: ${res.status}`);
-    }
-
-    const data = await res.json();
-    const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '講評を生成できませんでした。';
-
-    return NextResponse.json({ feedback });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ feedback: response.text });
+  } catch (error: unknown) {
+    console.error('AI採点エラー:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '採点処理中にエラーが発生しました' },
+      { status: 500 }
+    );
   }
 }
