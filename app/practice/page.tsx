@@ -263,6 +263,14 @@ export default function PracticePage() {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
 
+  // 新規問題追加モーダル用のステート
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newSubject, setNewSubject] = useState('刑法');
+  const [newTitle, setNewTitle] = useState('');
+  const [newFact, setNewFact] = useState('');
+  const [newNorm, setNewNorm] = useState('');
+  const [isSubmittingNewProblem, setIsSubmittingNewProblem] = useState(false);
+
   const availableSubjects = useMemo(() => {
     const subs = Array.from(new Set(problems.map((p) => p.subject).filter(Boolean)));
     return subs.sort((a, b) => {
@@ -312,12 +320,15 @@ export default function PracticePage() {
     try {
       const { data, error } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        const normalizedData = data.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
+        // 問題文が空や「刑法 第5問」の残骸を除外
+        const validData = data.filter((d: ProblemType) => d.target_issue !== '刑法 第5問' && d.id !== 'a1111111-1111-1111-1111-111111111111');
+        const normalizedData = validData.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
         const merged = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
         setProblems(merged);
         setSelectedProblemId(merged[0].id);
         loadDraftFromCloud(merged[0].id);
       } else {
+        setProblems(DEFAULT_PROBLEMS);
         loadDraftFromCloud(DEFAULT_PROBLEMS[0].id);
       }
     } catch (e) {
@@ -403,6 +414,71 @@ export default function PracticePage() {
     loadDraftFromCloud(targetId);
   };
 
+  // ★ 新規問題の登録処理
+  const handleCreateNewProblem = async () => {
+    if (!newTitle.trim() || !newFact.trim()) {
+      alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
+      return;
+    }
+    setIsSubmittingNewProblem(true);
+    try {
+      const newId = `prob-${Date.now()}`;
+      const newProblemData = {
+        id: newId,
+        subject: newSubject,
+        source_exam: '予備試験 論文式',
+        target_issue: newTitle.trim(),
+        time_limit_minutes: 70,
+        fact_context: newFact.trim(),
+        standard_norm: newNorm.trim() || '【規範定立・採点基準】問題文の事実と条文要件を対比して法的三段論法を展開すること。',
+        key_facts: [],
+        statutes: []
+      };
+
+      const { error } = await supabase.from('problems').insert([newProblemData]);
+      if (error) throw error;
+
+      alert('新しい問題を登録しました！');
+      setIsAddModalOpen(false);
+      setNewTitle('');
+      setNewFact('');
+      setNewNorm('');
+      
+      await loadProblemsFromSupabase();
+      switchProblem(newId);
+    } catch (e: unknown) {
+      alert(`問題登録エラー: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setIsSubmittingNewProblem(false);
+    }
+  };
+
+  // ★ 現在の問題の削除処理
+  const handleDeleteCurrentProblem = async () => {
+    if (problems.length <= 1) {
+      alert('これ以上問題を削除できません。最低1問は保持する必要があります。');
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      `現在表示中の問題「[${currentProblem.subject}] ${currentProblem.target_issue}」を削除しますか？\n※この操作は取り消せません。`
+    );
+    if (!isConfirmed) return;
+
+    try {
+      const { error } = await supabase.from('problems').delete().eq('id', currentProblem.id);
+      if (error) throw error;
+
+      alert('問題を削除しました。');
+      const remaining = problems.filter((p) => p.id !== currentProblem.id);
+      setProblems(remaining);
+      const nextProb = remaining[0] || DEFAULT_PROBLEMS[0];
+      switchProblem(nextProb.id);
+    } catch (e: unknown) {
+      alert(`問題削除エラー: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTimerRunning && secondsLeft > 0) {
@@ -429,7 +505,7 @@ export default function PracticePage() {
       return;
     }
 
-    if (!confirm('答案を提出し、Gemini AIによる考査委員基準採点を実行しますか？')) {
+    if (!confirm('答案を提出し、Gemini AIによる考査委員基準採点（答案構成チェック・即死地雷判定を含む）を実行しますか？')) {
       return;
     }
 
@@ -443,6 +519,7 @@ export default function PracticePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userDraft,
+          drillNotes,
           problemText: currentProblem.fact_context,
           timeSpentSeconds: timeSpent,
           standardNorm: currentProblem.standard_norm,
@@ -476,14 +553,14 @@ export default function PracticePage() {
   return (
     <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
-      {/* すっきり1行に収まる起案ヘッダー（重複した戻るボタンを撤廃し幅を最適化） */}
+      {/* 起案ヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         
         {/* 左側：科目選択 ＆ 問題選択 ＆ 保存状態 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>⚖️</span>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
             <select
               value={selectedSubjectFilter}
@@ -507,7 +584,7 @@ export default function PracticePage() {
             </select>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
             <select
               value={selectedProblemId}
@@ -522,7 +599,7 @@ export default function PracticePage() {
                 color: '#0f172a',
                 cursor: 'pointer',
                 outline: 'none',
-                maxWidth: '320px'
+                maxWidth: '260px'
               }}
             >
               {filteredProblems.map((p) => (
@@ -539,7 +616,7 @@ export default function PracticePage() {
         </div>
 
         {/* 右側：文字サイズ ＆ 70分タイマー ＆ 答案履歴リンク */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -607,55 +684,100 @@ export default function PracticePage() {
         
         {/* 左ペイン */}
         <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab('problem')}
-              style={{
-                padding: '10px 14px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent',
-                color: activeTab === 'problem' ? '#0284c7' : '#64748b',
-              }}
-            >
-              📄 事実・設問
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('drill')}
-              style={{
-                padding: '10px 14px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent',
-                color: activeTab === 'drill' ? '#2563eb' : '#64748b',
-              }}
-            >
-              📝 全科目起案ドリル・構成
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('statute')}
-              style={{
-                padding: '10px 14px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent',
-                color: activeTab === 'statute' ? '#0284c7' : '#64748b',
-              }}
-            >
-              📖 電子六法
-            </button>
+          
+          {/* ★ タブバー（右端に「＋ 新規問題」「🗑️ 問題削除」を常時固定配置） */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
+            <div style={{ display: 'flex' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('problem')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent',
+                  color: activeTab === 'problem' ? '#0284c7' : '#64748b',
+                }}
+              >
+                📄 事実・設問
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('drill')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent',
+                  color: activeTab === 'drill' ? '#2563eb' : '#64748b',
+                }}
+              >
+                📝 全科目起案ドリル・構成
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('statute')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent',
+                  color: activeTab === 'statute' ? '#0284c7' : '#64748b',
+                }}
+              >
+                📖 電子六法
+              </button>
+            </div>
+
+            {/* ★ ここに確実に常時表示されるボタンを配置 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(true)}
+                style={{
+                  padding: '4px 10px',
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: '900',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px'
+                }}
+              >
+                ＋ 新規問題
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCurrentProblem}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  color: '#be123c',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+                title="現在選択中の問題を削除"
+              >
+                🗑️ 削除
+              </button>
+            </div>
           </div>
 
           <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
@@ -690,7 +812,7 @@ export default function PracticePage() {
                     </button>
                   </div>
                   <p style={{ margin: 0, fontSize: '11px', color: '#3b82f6' }}>
-                    起案前の10分で即死地雷をチェックし、論点・事実・三段論法の骨子を整理します。
+                    起案前の10分で即死地雷をチェックし、骨子を整理します。構成メモは答案提出時にAI講評で自動チェック・補完されます。
                   </p>
                 </div>
 
@@ -732,7 +854,7 @@ export default function PracticePage() {
                   <textarea
                     value={drillNotes}
                     onChange={(e) => handleDrillNotesChange(e.target.value)}
-                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。"
+                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。&#10;※この内容は答案提出時にAI講評によって「思考フレームワーク・即死地雷」が自動判定・補完されます。"
                     style={{
                       width: '100%',
                       height: '200px',
@@ -847,7 +969,7 @@ export default function PracticePage() {
                 cursor: isEvaluating ? 'not-allowed' : 'pointer',
               }}
             >
-              {isEvaluating ? '⏳ 採点中...' : '🚀 答案提出・AI厳格採点'}
+              {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
             </button>
           </div>
 
@@ -879,7 +1001,7 @@ export default function PracticePage() {
             <div style={{ flex: '1', borderTop: '2px solid #cbd5e1', backgroundColor: '#fffdf5', padding: '14px', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#854d0e' }}>
-                  ⚖️ 考査委員採点講評（Gemini 3.8 Flash）
+                  ⚖️ 考査委員採点講評（答案構成チェック・即死地雷判定を含む）
                 </span>
                 <button
                   type="button"
@@ -897,6 +1019,93 @@ export default function PracticePage() {
         </section>
 
       </div>
+
+      {/* ★ 新規問題追加モーダル */}
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ➕ 新しい演習問題を追加登録
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 140px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_ORDER.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="例: 不動産二重譲渡と横領・客体の錯誤"
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
+                <textarea
+                  value={newFact}
+                  onChange={(e) => setNewFact(e.target.value)}
+                  placeholder="【事実】&#10;1. 甲は...&#10;&#10;【設問】&#10;甲の罪責を論ぜよ。"
+                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
+                <textarea
+                  value={newNorm}
+                  onChange={(e) => setNewNorm(e.target.value)}
+                  placeholder="AI採点時に参照する判例規範や当てはめ基準があれば入力してください。"
+                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateNewProblem}
+                disabled={isSubmittingNewProblem}
+                style={{ padding: '6px 18px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSubmittingNewProblem ? 'not-allowed' : 'pointer' }}
+              >
+                {isSubmittingNewProblem ? '保存中...' : '登録して起案を開始'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
