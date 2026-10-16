@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 type AnkiCard = {
   id: string;
@@ -36,22 +37,6 @@ const DEFAULT_CARDS: AnkiCard[] = [
     issue: '自治体が公の施設の利用を拒否・制限する際の合憲性判断基準は何か。',
     norm: '公の施設は住民の利用に供するために設置されたものであり、正当な理由がない限り利用を拒否できない（地方自治法244条2項）。集会の自由を制限する処分が合憲とされるためには、生命・身体・財産に具体的な危険が切迫し、警察等の警備によっても混乱を防止できない「明らかな差し迫った危険」が客観的事実に基づき認められなければならない。',
     keywords: ['正当な理由', '地方自治法244条2項', '明らかな差し迫った危険', '客観的事実', '警備による防止不能']
-  },
-  {
-    id: 'card-4',
-    subject: '商法',
-    title: '支配権移転新株発行の無効事由',
-    issue: '経営権争奪下における新株発行が無効となる基準は何か。',
-    norm: '会社法上、新株発行の無効事由は取引の安全に配慮して重大な法令・定款違反に限定される。経営権の維持・争奪を主要な目的として発行され、現経営陣の支配権維持を図る不公正発行（会社法247条2号）は、原則として差止事由にとどまるが、株主総会の決議を著しく無視した発行等、特段の事情がある場合には無効事由（828条1項2号）となり得る。',
-    keywords: ['重大な法令・定款違反', '取引の安全', '主要目的ルール', '不公正発行', '特段の事情']
-  },
-  {
-    id: 'card-5',
-    subject: '民事訴訟法',
-    title: '自己利用文書（民訴法220条4号ニ）',
-    issue: '内部検討用の社内文書は自己利用文書として開示を拒絶できるか。',
-    norm: '民事訴訟法220条4号ニの「専ら文書の所持者の利用に供するための文書」とは、外部への開示が予定されておらず、開示によって所持者に看過し難い不利益が生じるおそれがある文書をいう。作成目的、記載内容、利用形態、開示による不利益の重大性を総合勘案して判断する。',
-    keywords: ['専ら所持者の利用に供する', '外部開示が非予定', '看過し難い不利益', '総合勘案']
   }
 ];
 
@@ -64,14 +49,27 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   xl: { text: '20px', lh: '1.95', label: '特大' },
 };
 
+const SUBJECT_LIST = [
+  '刑法', '民法', '憲法', '商法', '民事訴訟法', '刑事訴訟法', '行政法', '民事実務', '刑事実務', '租税法', '経済法'
+];
+
 export default function AnkiPage() {
-  const [cards] = useState<AnkiCard[]>(DEFAULT_CARDS);
+  const [cards, setCards] = useState<AnkiCard[]>(DEFAULT_CARDS);
   const [selectedSubject, setSelectedSubject] = useState('ALL');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isMaskMode, setIsMaskMode] = useState(false);
   const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
   const [adminQuery, setAdminQuery] = useState('');
+
+  // 新規作成モーダル用ステート
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newSubject, setNewSubject] = useState('刑法');
+  const [newTitle, setNewTitle] = useState('');
+  const [newIssue, setNewIssue] = useState('');
+  const [newNorm, setNewNorm] = useState('');
+  const [newKeywords, setNewKeywords] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -82,7 +80,26 @@ export default function AnkiPage() {
       const admin = params.get('admin');
       if (admin) setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
     }
+    loadCards();
   }, []);
+
+  const loadCards = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('anki_cards')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        setCards(data);
+      } else {
+        setCards(DEFAULT_CARDS);
+      }
+    } catch (e) {
+      console.warn('暗記カード取得エラー:', e);
+      setCards(DEFAULT_CARDS);
+    }
+  };
 
   const changeFontSize = (level: FontSizeLevel) => {
     setFontSize(level);
@@ -108,11 +125,84 @@ export default function AnkiPage() {
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
 
+  // 新規カード登録処理
+  const handleCreateCard = async () => {
+    if (!newTitle.trim() || !newNorm.trim()) {
+      alert('「論点名・タイトル」と「判例規範・理由づけ」を入力してください。');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`;
+      const kwArray = newKeywords
+        .split(/[,、\s]+/)
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const cardData: AnkiCard = {
+        id: newId,
+        subject: newSubject,
+        title: newTitle.trim(),
+        issue: newIssue.trim() || `${newTitle.trim()}の成立要件・判断枠組みは何か。`,
+        norm: newNorm.trim(),
+        keywords: kwArray,
+      };
+
+      const { error } = await supabase.from('anki_cards').insert([cardData]);
+      if (error) throw error;
+
+      alert('新しい暗記カードを登録しました！');
+      setIsModalOpen(false);
+      setNewTitle('');
+      setNewIssue('');
+      setNewNorm('');
+      setNewKeywords('');
+
+      // リスト再取得
+      await loadCards();
+      setSelectedSubject(newSubject);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+    } catch (err: unknown) {
+      alert(`カード登録エラー: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 現在のカード削除処理
+  const handleDeleteCard = async () => {
+    if (cards.length <= 1) {
+      alert('これ以上削除できません。最低1枚のカードを保持する必要があります。');
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      `現在表示中のカード「[${currentCard.subject}] ${currentCard.title}」を削除しますか？`
+    );
+    if (!isConfirmed) return;
+
+    try {
+      const { error } = await supabase.from('anki_cards').delete().eq('id', currentCard.id);
+      if (error) throw error;
+
+      alert('カードを削除しました。');
+      const remaining = cards.filter((c) => c.id !== currentCard.id);
+      setCards(remaining);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+    } catch (err: unknown) {
+      alert(`削除エラー: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   // 穴埋めマスク生成
   const renderMaskedNorm = (normText: string, keywords: string[]) => {
-    if (!isMaskMode) return normText;
+    if (!isMaskMode || !keywords || keywords.length === 0) return normText;
     let replaced = normText;
     keywords.forEach((kw) => {
+      if (!kw) return;
       const regex = new RegExp(kw, 'g');
       replaced = replaced.replace(regex, `【 ＿＿＿＿ 】`);
     });
@@ -125,6 +215,7 @@ export default function AnkiPage() {
       {/* 48pxスリムヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         
+        {/* 左側：科目選択 ＆ 新規作成ボタン ＆ カウンター */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>🗂️</span>
           <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>論証暗記カード</span>
@@ -151,19 +242,41 @@ export default function AnkiPage() {
               }}
             >
               <option value="ALL">全科目 ({cards.length})</option>
-              {['刑法', '民法', '憲法', '商法', '民事訴訟法'].map((s) => (
+              {SUBJECT_LIST.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
+          {/* ★ 新規カード作成ボタン */}
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            style={{
+              padding: '3px 10px',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: '900',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+            }}
+          >
+            ＋ 新規作成
+          </button>
+
           <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#e2e8f0', color: '#334155', fontWeight: 'bold' }}>
-            {currentIndex + 1} / {filteredCards.length}
+            {filteredCards.length > 0 ? `${currentIndex + 1} / ${filteredCards.length}` : '0 / 0'}
           </span>
         </div>
 
+        {/* 右側：文字サイズ切り替え ＆ CBT起案室リンク */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* 文字サイズボタン群 */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -231,9 +344,34 @@ export default function AnkiPage() {
                 <span style={{ padding: '2px 8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px' }}>
                   {currentCard.subject}
                 </span>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
-                  {isFlipped ? '【裏面：判例規範・理由づけ】' : '【表面：論点・問題提起】（クリックで反転）'}
-                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
+                    {isFlipped ? '【裏面：判例規範・理由づけ】' : '【表面：論点・問題提起】（クリックで反転）'}
+                  </span>
+                  
+                  {/* カード削除ボタン */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCard();
+                    }}
+                    style={{
+                      padding: '2px 6px',
+                      backgroundColor: '#fff1f2',
+                      border: '1px solid #fecdd3',
+                      color: '#be123c',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    title="このカードを削除"
+                  >
+                    🗑️ 削除
+                  </button>
+                </div>
               </div>
 
               <h2 style={{ fontSize: '17px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>
@@ -250,13 +388,15 @@ export default function AnkiPage() {
                     {renderMaskedNorm(currentCard.norm, currentCard.keywords)}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
-                    {currentCard.keywords.map((kw, idx) => (
-                      <span key={idx} style={{ padding: '2px 8px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>
-                        #{kw}
-                      </span>
-                    ))}
-                  </div>
+                  {currentCard.keywords && currentCard.keywords.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {currentCard.keywords.map((kw, idx) => (
+                        <span key={idx} style={{ padding: '2px 8px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>
+                          #{kw}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -328,6 +468,103 @@ export default function AnkiPage() {
 
         </div>
       </main>
+
+      {/* ★ 新規カード作成モーダル */}
+      {isModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ➕ 新しい論証暗記カードを作成
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 130px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_LIST.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・カードタイトル *</label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="例: 共犯からの離脱（実行着手前）"
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>【表面】問題提起・検討課題</label>
+                <textarea
+                  value={newIssue}
+                  onChange={(e) => setNewIssue(e.target.value)}
+                  placeholder="例: 共謀に基づく実行着手前に離脱が認められるための要件は何か。"
+                  style={{ width: '100%', height: '60px', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>【裏面】判例規範・理由づけ *</label>
+                <textarea
+                  value={newNorm}
+                  onChange={(e) => setNewNorm(e.target.value)}
+                  placeholder="判例の規範定立、理由づけ、当てはめ基準を入力してください。"
+                  style={{ width: '100%', height: '120px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>穴埋めマスク用キーワード（カンマ区切り）</label>
+                <input
+                  type="text"
+                  value={newKeywords}
+                  onChange={(e) => setNewKeywords(e.target.value)}
+                  placeholder="例: 因果性の遮断, 物理的・心理的因果性, 積極的除去"
+                  style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCard}
+                disabled={isSaving}
+                style={{ padding: '6px 18px', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+              >
+                {isSaving ? '保存中...' : 'カードを登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
