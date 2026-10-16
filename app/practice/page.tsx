@@ -214,7 +214,7 @@ type ProblemType = {
 
 const DEFAULT_PROBLEMS: ProblemType[] = [
   {
-    id: 'prob-1-co-principals-withdrawal',
+    id: 'c10919f3-ec0d-4db4-b860-34bf19becaae',
     subject: '刑法',
     source_exam: '予備試験 論文式',
     target_issue: '共犯からの離脱・強盗致傷罪の共同正犯',
@@ -263,7 +263,6 @@ export default function PracticePage() {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
 
-  // 新規問題追加モーダル用のステート
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('刑法');
   const [newTitle, setNewTitle] = useState('');
@@ -300,6 +299,7 @@ export default function PracticePage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'offline'>('synced');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const [statuteSearchQuery, setStatuteSearchQuery] = useState('');
   const [statuteLawFilter, setStatuteLawFilter] = useState('ALL');
@@ -320,7 +320,6 @@ export default function PracticePage() {
     try {
       const { data, error } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        // 問題文が空や「刑法 第5問」の残骸を除外
         const validData = data.filter((d: ProblemType) => d.target_issue !== '刑法 第5問' && d.id !== 'a1111111-1111-1111-1111-111111111111');
         const normalizedData = validData.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
         const merged = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
@@ -408,13 +407,13 @@ export default function PracticePage() {
     setUserDraft('');
     setDrillNotes('');
     setAiFeedback(null);
+    setSaveSuccessMsg(null);
     setSecondsLeft(70 * 60);
     setIsTimerRunning(false);
     setActiveTab('problem');
     loadDraftFromCloud(targetId);
   };
 
-  // ★ 新規問題の登録処理
   const handleCreateNewProblem = async () => {
     if (!newTitle.trim() || !newFact.trim()) {
       alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
@@ -422,7 +421,7 @@ export default function PracticePage() {
     }
     setIsSubmittingNewProblem(true);
     try {
-      const newId = `prob-${Date.now()}`;
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `prob-${Date.now()}`;
       const newProblemData = {
         id: newId,
         subject: newSubject,
@@ -453,7 +452,6 @@ export default function PracticePage() {
     }
   };
 
-  // ★ 現在の問題の削除処理
   const handleDeleteCurrentProblem = async () => {
     if (problems.length <= 1) {
       alert('これ以上問題を削除できません。最低1問は保持する必要があります。');
@@ -499,6 +497,7 @@ export default function PracticePage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // ★ 答案提出＆講評後の Supabase submissions 確実保存ハンドラー
   const handleSubmitEvaluation = async () => {
     if (!userDraft.trim()) {
       alert('答案本文が空です。起案を入力してください。');
@@ -511,9 +510,11 @@ export default function PracticePage() {
 
     setIsEvaluating(true);
     setAiFeedback(null);
+    setSaveSuccessMsg(null);
     const timeSpent = 70 * 60 - secondsLeft;
 
     try {
+      // 1. 採点APIの呼び出し
       const res = await fetch('/api/evaluate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -533,7 +534,8 @@ export default function PracticePage() {
       const feedback = data.feedback || '講評を受信できませんでした。';
       setAiFeedback(feedback);
 
-      await supabase.from('submissions').insert([
+      // 2. ★ Supabase の submissions テーブルへ確実に保存（エラーを厳密に捕捉）
+      const { error: insertError } = await supabase.from('submissions').insert([
         {
           problem_id: currentProblem.id,
           user_draft: userDraft,
@@ -541,6 +543,13 @@ export default function PracticePage() {
           ai_feedback: feedback,
         },
       ]);
+
+      if (insertError) {
+        console.error('答案履歴の保存エラー:', insertError);
+        alert(`講評は取得できましたが、履歴の保存に失敗しました。\n理由: ${insertError.message}\n（SupabaseのRLSポリシーを確認してください）`);
+      } else {
+        setSaveSuccessMsg('✅ 答案履歴（ダッシュボード）に正常にアーカイブ保存されました！');
+      }
     } catch (err: unknown) {
       alert(`採点エラー: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -556,7 +565,6 @@ export default function PracticePage() {
       {/* 起案ヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         
-        {/* 左側：科目選択 ＆ 問題選択 ＆ 保存状態 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>⚖️</span>
 
@@ -615,7 +623,6 @@ export default function PracticePage() {
           </span>
         </div>
 
-        {/* 右側：文字サイズ ＆ 70分タイマー ＆ 答案履歴リンク */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
@@ -685,7 +692,6 @@ export default function PracticePage() {
         {/* 左ペイン */}
         <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
           
-          {/* ★ タブバー（右端に「＋ 新規問題」「🗑️ 問題削除」を常時固定配置） */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
             <div style={{ display: 'flex' }}>
               <button
@@ -738,7 +744,6 @@ export default function PracticePage() {
               </button>
             </div>
 
-            {/* ★ ここに確実に常時表示されるボタンを配置 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
                 type="button"
@@ -1011,6 +1016,14 @@ export default function PracticePage() {
                   閉じる
                 </button>
               </div>
+
+              {/* ★ 保存成功バッジ表示 */}
+              {saveSuccessMsg && (
+                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  {saveSuccessMsg}
+                </div>
+              )}
+
               <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
                 {aiFeedback}
               </div>
@@ -1020,7 +1033,7 @@ export default function PracticePage() {
 
       </div>
 
-      {/* ★ 新規問題追加モーダル */}
+      {/* 新規問題追加モーダル */}
       {isAddModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
