@@ -263,12 +263,21 @@ export default function PracticePage() {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
 
+  // 新規問題モーダル
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('刑法');
   const [newTitle, setNewTitle] = useState('');
   const [newFact, setNewFact] = useState('');
   const [newNorm, setNewNorm] = useState('');
   const [isSubmittingNewProblem, setIsSubmittingNewProblem] = useState(false);
+
+  // ★ 問題編集モーダル
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editSubject, setEditSubject] = useState('刑法');
+  const [editTitle, setEditTitle] = useState('');
+  const [editFact, setEditFact] = useState('');
+  const [editNorm, setEditNorm] = useState('');
+  const [isUpdatingProblem, setIsUpdatingProblem] = useState(false);
 
   const availableSubjects = useMemo(() => {
     const subs = Array.from(new Set(problems.map((p) => p.subject).filter(Boolean)));
@@ -309,12 +318,22 @@ export default function PracticePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedFs = localStorage.getItem('touan_font_size') as FontSizeLevel;
+      if (savedFs && fontSizes[savedFs]) setFontSize(savedFs);
+
       const params = new URLSearchParams(window.location.search);
       const admin = params.get('admin');
       if (admin) setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
     }
     loadProblemsFromSupabase();
   }, []);
+
+  const changeFontSize = (level: FontSizeLevel) => {
+    setFontSize(level);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('touan_font_size', level);
+    }
+  };
 
   const loadProblemsFromSupabase = async () => {
     try {
@@ -452,6 +471,51 @@ export default function PracticePage() {
     }
   };
 
+  // ★ 編集モーダルを開く
+  const handleOpenEditModal = () => {
+    setEditSubject(currentProblem.subject);
+    setEditTitle(currentProblem.target_issue);
+    setEditFact(currentProblem.fact_context);
+    setEditNorm(currentProblem.standard_norm || '');
+    setIsEditModalOpen(true);
+  };
+
+  // ★ 問題の更新・上書き保存処理
+  const handleUpdateProblem = async () => {
+    if (!editTitle.trim() || !editFact.trim()) {
+      alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
+      return;
+    }
+    setIsUpdatingProblem(true);
+    try {
+      const updatedData = {
+        subject: editSubject,
+        target_issue: editTitle.trim(),
+        fact_context: editFact.trim(),
+        standard_norm: editNorm.trim() || '【規範定立・採点基準】問題文の事実と条文要件を対比して法的三段論法を展開すること。',
+      };
+
+      const { error } = await supabase
+        .from('problems')
+        .update(updatedData)
+        .eq('id', currentProblem.id);
+
+      if (error) throw error;
+
+      // ローカルステートの更新
+      setProblems((prev) =>
+        prev.map((p) => (p.id === currentProblem.id ? { ...p, ...updatedData } : p))
+      );
+
+      alert('問題の内容を更新しました！');
+      setIsEditModalOpen(false);
+    } catch (err: unknown) {
+      alert(`問題更新エラー: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsUpdatingProblem(false);
+    }
+  };
+
   const handleDeleteCurrentProblem = async () => {
     if (problems.length <= 1) {
       alert('これ以上問題を削除できません。最低1問は保持する必要があります。');
@@ -497,7 +561,6 @@ export default function PracticePage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // ★ 答案提出＆講評後の Supabase submissions 確実保存ハンドラー
   const handleSubmitEvaluation = async () => {
     if (!userDraft.trim()) {
       alert('答案本文が空です。起案を入力してください。');
@@ -514,7 +577,6 @@ export default function PracticePage() {
     const timeSpent = 70 * 60 - secondsLeft;
 
     try {
-      // 1. 採点APIの呼び出し
       const res = await fetch('/api/evaluate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -534,7 +596,6 @@ export default function PracticePage() {
       const feedback = data.feedback || '講評を受信できませんでした。';
       setAiFeedback(feedback);
 
-      // 2. ★ Supabase の submissions テーブルへ確実に保存（エラーを厳密に捕捉）
       const { error: insertError } = await supabase.from('submissions').insert([
         {
           problem_id: currentProblem.id,
@@ -546,7 +607,7 @@ export default function PracticePage() {
 
       if (insertError) {
         console.error('答案履歴の保存エラー:', insertError);
-        alert(`講評は取得できましたが、履歴の保存に失敗しました。\n理由: ${insertError.message}\n（SupabaseのRLSポリシーを確認してください）`);
+        alert(`講評は取得できましたが、履歴の保存に失敗しました。\n理由: ${insertError.message}`);
       } else {
         setSaveSuccessMsg('✅ 答案履歴（ダッシュボード）に正常にアーカイブ保存されました！');
       }
@@ -630,7 +691,7 @@ export default function PracticePage() {
               <button
                 key={level}
                 type="button"
-                onClick={() => setFontSize(level)}
+                onClick={() => changeFontSize(level)}
                 style={{
                   padding: '2px 6px',
                   fontSize: '11px',
@@ -744,6 +805,7 @@ export default function PracticePage() {
               </button>
             </div>
 
+            {/* ★ 操作ボタン群：新規・編集・削除 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
                 type="button"
@@ -758,13 +820,30 @@ export default function PracticePage() {
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px'
                 }}
+                title="新しい演習問題を追加"
               >
                 ＋ 新規問題
               </button>
+
+              <button
+                type="button"
+                onClick={handleOpenEditModal}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+                title="現在選択中の問題を編集"
+              >
+                ✏️ 編集
+              </button>
+
               <button
                 type="button"
                 onClick={handleDeleteCurrentProblem}
@@ -1017,7 +1096,6 @@ export default function PracticePage() {
                 </button>
               </div>
 
-              {/* ★ 保存成功バッジ表示 */}
               {saveSuccessMsg && (
                 <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
                   {saveSuccessMsg}
@@ -1113,6 +1191,89 @@ export default function PracticePage() {
                 style={{ padding: '6px 18px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSubmittingNewProblem ? 'not-allowed' : 'pointer' }}
               >
                 {isSubmittingNewProblem ? '保存中...' : '登録して起案を開始'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ★ 問題編集モーダル */}
+      {isEditModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ✏️ 演習問題を編集
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 140px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_ORDER.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
+                <textarea
+                  value={editFact}
+                  onChange={(e) => setEditFact(e.target.value)}
+                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
+                <textarea
+                  value={editNorm}
+                  onChange={(e) => setEditNorm(e.target.value)}
+                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateProblem}
+                disabled={isUpdatingProblem}
+                style={{ padding: '6px 18px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isUpdatingProblem ? 'not-allowed' : 'pointer' }}
+              >
+                {isUpdatingProblem ? '更新中...' : '上書き保存'}
               </button>
             </div>
           </div>

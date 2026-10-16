@@ -62,14 +62,24 @@ export default function AnkiPage() {
   const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
   const [adminQuery, setAdminQuery] = useState('');
 
-  // 新規作成モーダル用ステート
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // 新規登録モーダル用ステート
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('刑法');
   const [newTitle, setNewTitle] = useState('');
   const [newIssue, setNewIssue] = useState('');
   const [newNorm, setNewNorm] = useState('');
   const [newKeywords, setNewKeywords] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // ★ 編集モーダル用ステート
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editId, setEditId] = useState('');
+  const [editSubject, setEditSubject] = useState('刑法');
+  const [editTitle, setEditTitle] = useState('');
+  const [editIssue, setEditIssue] = useState('');
+  const [editNorm, setEditNorm] = useState('');
+  const [editKeywords, setEditKeywords] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -153,13 +163,12 @@ export default function AnkiPage() {
       if (error) throw error;
 
       alert('新しい暗記カードを登録しました！');
-      setIsModalOpen(false);
+      setIsCreateModalOpen(false);
       setNewTitle('');
       setNewIssue('');
       setNewNorm('');
       setNewKeywords('');
 
-      // リスト再取得
       await loadCards();
       setSelectedSubject(newSubject);
       setCurrentIndex(0);
@@ -171,7 +180,61 @@ export default function AnkiPage() {
     }
   };
 
-  // 現在のカード削除処理
+  // ★ 編集モーダルを開く
+  const handleOpenEditModal = () => {
+    setEditId(currentCard.id);
+    setEditSubject(currentCard.subject);
+    setEditTitle(currentCard.title);
+    setEditIssue(currentCard.issue || '');
+    setEditNorm(currentCard.norm || '');
+    setEditKeywords((currentCard.keywords || []).join(', '));
+    setIsEditModalOpen(true);
+  };
+
+  // ★ 編集の上書き保存処理
+  const handleUpdateCard = async () => {
+    if (!editTitle.trim() || !editNorm.trim()) {
+      alert('「論点名・タイトル」と「判例規範・理由づけ」を入力してください。');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const kwArray = editKeywords
+        .split(/[,、\s]+/)
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const updatedData = {
+        subject: editSubject,
+        title: editTitle.trim(),
+        issue: editIssue.trim() || `${editTitle.trim()}の成立要件・判断枠組みは何か。`,
+        norm: editNorm.trim(),
+        keywords: kwArray,
+      };
+
+      const { error } = await supabase
+        .from('anki_cards')
+        .update(updatedData)
+        .eq('id', editId);
+
+      if (error) throw error;
+
+      // ローカルステートを即座に更新
+      setCards((prev) =>
+        prev.map((c) => (c.id === editId ? { ...c, ...updatedData } : c))
+      );
+
+      alert('カードの内容を更新しました！');
+      setIsEditModalOpen(false);
+    } catch (err: unknown) {
+      alert(`カード更新エラー: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // カード削除処理
   const handleDeleteCard = async () => {
     if (cards.length <= 1) {
       alert('これ以上削除できません。最低1枚のカードを保持する必要があります。');
@@ -215,7 +278,6 @@ export default function AnkiPage() {
       {/* 48pxスリムヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         
-        {/* 左側：科目選択 ＆ 新規作成ボタン ＆ カウンター */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>🗂️</span>
           <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>論証暗記カード</span>
@@ -248,10 +310,10 @@ export default function AnkiPage() {
             </select>
           </div>
 
-          {/* ★ 新規カード作成ボタン */}
+          {/* 新規作成ボタン */}
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsCreateModalOpen(true)}
             style={{
               padding: '3px 10px',
               backgroundColor: '#10b981',
@@ -275,8 +337,8 @@ export default function AnkiPage() {
           </span>
         </div>
 
-        {/* 右側：文字サイズ切り替え ＆ CBT起案室リンク */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* 文字サイズボタン群 */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -345,12 +407,34 @@ export default function AnkiPage() {
                   {currentCard.subject}
                 </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>
-                    {isFlipped ? '【裏面：判例規範・理由づけ】' : '【表面：論点・問題提起】（クリックで反転）'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginRight: '4px' }}>
+                    {isFlipped ? '【裏面：判例規範】' : '【表面：問題提起】'}
                   </span>
                   
-                  {/* カード削除ボタン */}
+                  {/* ★ 編集ボタン */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEditModal();
+                    }}
+                    style={{
+                      padding: '2px 8px',
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    title="このカードを編集"
+                  >
+                    ✏️ 編集
+                  </button>
+
+                  {/* 削除ボタン */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -358,11 +442,11 @@ export default function AnkiPage() {
                       handleDeleteCard();
                     }}
                     style={{
-                      padding: '2px 6px',
+                      padding: '2px 8px',
                       backgroundColor: '#fff1f2',
                       border: '1px solid #fecdd3',
                       color: '#be123c',
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: 'bold',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -469,8 +553,8 @@ export default function AnkiPage() {
         </div>
       </main>
 
-      {/* ★ 新規カード作成モーダル */}
-      {isModalOpen && (
+      {/* 新規カード作成モーダル */}
+      {isCreateModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
@@ -479,7 +563,7 @@ export default function AnkiPage() {
               </h3>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => setIsCreateModalOpen(false)}
                 style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
               >
                 ✕
@@ -548,7 +632,7 @@ export default function AnkiPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => setIsCreateModalOpen(false)}
                 style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 キャンセル
@@ -560,6 +644,99 @@ export default function AnkiPage() {
                 style={{ padding: '6px 18px', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSaving ? 'not-allowed' : 'pointer' }}
               >
                 {isSaving ? '保存中...' : 'カードを登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ★ 編集モーダル */}
+      {isEditModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ✏️ 論証暗記カードを編集
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 130px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_LIST.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・カードタイトル *</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>【表面】問題提起・検討課題</label>
+                <textarea
+                  value={editIssue}
+                  onChange={(e) => setEditIssue(e.target.value)}
+                  style={{ width: '100%', height: '60px', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>【裏面】判例規範・理由づけ *</label>
+                <textarea
+                  value={editNorm}
+                  onChange={(e) => setEditNorm(e.target.value)}
+                  style={{ width: '100%', height: '120px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>穴埋めマスク用キーワード（カンマ区切り）</label>
+                <input
+                  type="text"
+                  value={editKeywords}
+                  onChange={(e) => setEditKeywords(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateCard}
+                disabled={isUpdating}
+                style={{ padding: '6px 18px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isUpdating ? 'not-allowed' : 'pointer' }}
+              >
+                {isUpdating ? '更新中...' : '上書き保存'}
               </button>
             </div>
           </div>
