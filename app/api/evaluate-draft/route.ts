@@ -57,7 +57,7 @@ ${userDraft}
 `;
 
     // 優先モデルと混雑時のフォールバック先モデル
-    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-pro'];
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
     let lastError: unknown = null;
     let feedbackText = '';
 

@@ -41,7 +41,8 @@ ${topicOrStatute}
   "keywords": ["重要語句1", "重要語句2", "重要語句3"]
 }`;
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-pro'];
+    // ★ 最新の安定モデル gemini-3.8-flash と推奨モデル gemini-3.1-pro-preview を指定
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
     let lastError: unknown = null;
     let cardData = null;
 
