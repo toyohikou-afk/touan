@@ -1,91 +1,85 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const { subject, topicOrStatute } = await req.json();
+
+    if (!topicOrStatute || !topicOrStatute.trim()) {
+      return NextResponse.json({ error: '論点名または条文番号を入力してください' }, { status: 400 });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY が未設定です。' }, { status: 500 });
+      return NextResponse.json({ error: 'GEMINI_API_KEY が未設定です' }, { status: 500 });
     }
-
-    const { problem, feedbackText, userDraft } = await req.json();
-
-    const prompt = `あなたは司法試験・予備試験の論文添削および論証カード作成の専門家です。
-以下の設問情報、受験者答案、AI講評から、実戦的な【論証カード用JSONデータ】を生成してください。
-マークダウンコードブロック（\`\`\`json 等）や解説文は一切出力せず、純粋なJSON文字列のみを出力してください。
-
-【最重要ルール】
-「target_issue_full」には、抽象的な要約タイトルではなく、以下の【問題文全体（事実関係）】の全文を改行等も含めてそのまま完全に格納してください。要約や省略は禁止です。
-
-【問題情報】
-科目: ${problem.subject}
-問題区分: ${problem.source_exam}
-問題文全体（事実関係）:
-${problem.fact_context}
-
-【受験者答案】
-${userDraft}
-
-【AI講評内容】
-${feedbackText}
-
-【出力JSONフォーマット】
-{
-  "subject": "${problem.subject}",
-  "source_exam": "${problem.source_exam}",
-  "target_issue_full": ${JSON.stringify(problem.fact_context)},
-  "norm": "答案に書くべき正確な判例規範（要件・規範定立）",
-  "reasoning": "規範を導く理由づけ・条文の趣旨",
-  "application_criteria": "本問の事実を規範にあてはめる際の具体的考慮要素・判断基準",
-  "key_facts_extracted": [
-    {
-      "fact": "問題文から拾うべき具体的事実",
-      "legal_evaluation": "その事実に対する法的位置づけ・評価"
-    }
-  ],
-  "weak_point_memo": "受験者の起案において落とした重要事実やあてはめの改善点",
-  "model_phrase": "本番答案のあてはめで使える実戦的な決まり文句・評価フレーズ"
-}`;
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemma-4-26b-a4b-it',
-      contents: prompt,
-    });
 
-    const raw = response.text || '';
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-    const cardData = JSON.parse(cleaned);
+    const prompt = `あなたは司法試験・予備試験の論文指導における厳格な考査委員基準の法学者です。
+受験生が効率的に論証を暗記し、本番の答案作成に直結する表現を身につけられるよう、以下の【科目】および【指定された論点・条文】に基づき、答案でそのまま使える判例規範・理由づけ・問題提起・穴埋めキーワードをJSON形式で生成してください。
 
-    // 確実に問題文全文が入るようにフォールバック担保
-    if (!cardData.target_issue_full || cardData.target_issue_full.length < 50) {
-      cardData.target_issue_full = problem.fact_context;
-    }
+【科目】
+${subject || '刑法'}
 
-    // Supabaseへの自動保存
-    if (supabaseUrl && supabaseServiceKey) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        await supabase.from('study_cards').insert({
-          subject: cardData.subject,
-          theme: cardData.target_issue_full,
-          norm: cardData.norm,
-          reasoning: cardData.reasoning,
-          card_data: cardData,
-          created_at: new Date().toISOString(),
-        });
-      } catch (dbErr) {
-        console.warn('study_cards 保存スキップ:', dbErr);
+【指定された論点または条文番号】
+${topicOrStatute}
+
+【生成基準（厳守）】
+1. title: 短く的確な論点カードタイトル（例: 「不動産二重譲渡と背信的悪意者排除の法理」「共犯からの離脱（着手前）」など）
+2. issue: 論文答案の冒頭で使える簡潔な問題提起・検討課題（1〜2文）
+3. norm: 判例の規範定立および論理的理由づけ。答案作成に直結する正確なキーワードを含み、当てはめ基準が明確な論証文（150〜300字程度）。
+4. keywords: 暗記マスク（穴埋め）にすべき、答案で落とすと致命的減点になる核心的な法条語句・判例キーワード（3〜6個の配列）。
+
+必ず以下のJSON形式のみを出力してください（Markdownコードブロックは不要、純粋なJSON文字列のみ）：
+{
+  "title": "カードタイトル",
+  "issue": "問題提起文",
+  "norm": "判例規範・理由づけ文",
+  "keywords": ["重要語句1", "重要語句2", "重要語句3"]
+}`;
+
+    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-pro'];
+    let lastError: unknown = null;
+    let cardData = null;
+
+    for (const model of candidateModels) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+            },
+          });
+
+          if (response && response.text) {
+            const cleaned = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+            cardData = JSON.parse(cleaned);
+            break;
+          }
+        } catch (err: unknown) {
+          lastError = err;
+          console.warn(`[カード生成API] モデル ${model} 試行 ${attempt} 失敗:`, err instanceof Error ? err.message : err);
+          if (attempt < 2) await sleep(1500);
+        }
       }
+      if (cardData) break;
     }
 
-    return NextResponse.json({ success: true, card: cardData });
-  } catch (error: any) {
-    console.error('論証カードJSON生成例外:', error);
-    return NextResponse.json({ error: error.message || '生成失敗' }, { status: 500 });
+    if (!cardData) {
+      throw lastError || new Error('カード生成に失敗しました');
+    }
+
+    return NextResponse.json(cardData);
+  } catch (error: unknown) {
+    console.error('カード生成APIエラー:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'カード生成処理中にエラーが発生しました' },
+      { status: 500 }
+    );
   }
 }

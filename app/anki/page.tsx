@@ -71,7 +71,11 @@ export default function AnkiPage() {
   const [newKeywords, setNewKeywords] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // ★ 編集モーダル用ステート
+  // ★ AI自動生成用ステート
+  const [aiTopicInput, setAiTopicInput] = useState('');
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  // 編集モーダル用ステート
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editId, setEditId] = useState('');
   const [editSubject, setEditSubject] = useState('刑法');
@@ -135,6 +139,41 @@ export default function AnkiPage() {
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
 
+  // ★ AIによる自動生成ハンドラー
+  const handleGenerateByAi = async () => {
+    if (!aiTopicInput.trim()) {
+      alert('論点名または条文番号を入力してください。（例: 民法177条の第三者、共犯からの離脱）');
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    try {
+      const res = await fetch('/api/generate-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: newSubject,
+          topicOrStatute: aiTopicInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'AI自動生成に失敗しました');
+
+      // フォームへ自動入力
+      if (data.title) setNewTitle(data.title);
+      if (data.issue) setNewIssue(data.issue);
+      if (data.norm) setNewNorm(data.norm);
+      if (data.keywords && Array.isArray(data.keywords)) {
+        setNewKeywords(data.keywords.join(', '));
+      }
+    } catch (err: unknown) {
+      alert(`AI生成エラー: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   // 新規カード登録処理
   const handleCreateCard = async () => {
     if (!newTitle.trim() || !newNorm.trim()) {
@@ -168,6 +207,7 @@ export default function AnkiPage() {
       setNewIssue('');
       setNewNorm('');
       setNewKeywords('');
+      setAiTopicInput('');
 
       await loadCards();
       setSelectedSubject(newSubject);
@@ -180,7 +220,7 @@ export default function AnkiPage() {
     }
   };
 
-  // ★ 編集モーダルを開く
+  // 編集モーダルを開く
   const handleOpenEditModal = () => {
     setEditId(currentCard.id);
     setEditSubject(currentCard.subject);
@@ -191,7 +231,7 @@ export default function AnkiPage() {
     setIsEditModalOpen(true);
   };
 
-  // ★ 編集の上書き保存処理
+  // 編集の上書き保存処理
   const handleUpdateCard = async () => {
     if (!editTitle.trim() || !editNorm.trim()) {
       alert('「論点名・タイトル」と「判例規範・理由づけ」を入力してください。');
@@ -220,7 +260,6 @@ export default function AnkiPage() {
 
       if (error) throw error;
 
-      // ローカルステートを即座に更新
       setCards((prev) =>
         prev.map((c) => (c.id === editId ? { ...c, ...updatedData } : c))
       );
@@ -278,6 +317,7 @@ export default function AnkiPage() {
       {/* 48pxスリムヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         
+        {/* 左側：科目選択 ＆ 新規作成ボタン ＆ カウンター */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>🗂️</span>
           <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>論証暗記カード</span>
@@ -310,10 +350,12 @@ export default function AnkiPage() {
             </select>
           </div>
 
-          {/* 新規作成ボタン */}
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setIsCreateModalOpen(true);
+              setAiTopicInput('');
+            }}
             style={{
               padding: '3px 10px',
               backgroundColor: '#10b981',
@@ -337,8 +379,8 @@ export default function AnkiPage() {
           </span>
         </div>
 
+        {/* 右側：文字サイズ切り替え ＆ CBT起案室リンク */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* 文字サイズボタン群 */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -412,7 +454,6 @@ export default function AnkiPage() {
                     {isFlipped ? '【裏面：判例規範】' : '【表面：問題提起】'}
                   </span>
                   
-                  {/* ★ 編集ボタン */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -434,7 +475,6 @@ export default function AnkiPage() {
                     ✏️ 編集
                   </button>
 
-                  {/* 削除ボタン */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -553,10 +593,11 @@ export default function AnkiPage() {
         </div>
       </main>
 
-      {/* 新規カード作成モーダル */}
+      {/* 新規カード作成モーダル（AI自動生成機能付き） */}
       {isCreateModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
                 ➕ 新しい論証暗記カードを作成
@@ -570,6 +611,52 @@ export default function AnkiPage() {
               </button>
             </div>
 
+            {/* ★ AI自動生成アシストセクション */}
+            <div style={{ backgroundColor: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#166534' }}>
+                  ✨ Gemini AI 論証自動生成アシスト
+                </span>
+                <span style={{ fontSize: '10px', color: '#15803d' }}>
+                  判例規範・理由づけ・穴埋めキーワードを一発生成
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={aiTopicInput}
+                  onChange={(e) => setAiTopicInput(e.target.value)}
+                  placeholder="論点名または条文番号（例: 民法177条の第三者、刑法 共犯からの離脱）"
+                  style={{ flex: 1, padding: '6px 10px', fontSize: '12px', border: '1px solid #86efac', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGenerateByAi();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateByAi}
+                  disabled={isGeneratingAi}
+                  style={{
+                    padding: '6px 14px',
+                    backgroundColor: isGeneratingAi ? '#94a3b8' : '#059669',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: isGeneratingAi ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isGeneratingAi ? '⏳ 生成中...' : '⚡️ 自動入力'}
+                </button>
+              </div>
+            </div>
+
+            {/* 入力フォーム本体 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: '0 0 130px' }}>
@@ -603,7 +690,7 @@ export default function AnkiPage() {
                   value={newIssue}
                   onChange={(e) => setNewIssue(e.target.value)}
                   placeholder="例: 共謀に基づく実行着手前に離脱が認められるための要件は何か。"
-                  style={{ width: '100%', height: '60px', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', height: '54px', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -650,7 +737,7 @@ export default function AnkiPage() {
         </div>
       )}
 
-      {/* ★ 編集モーダル */}
+      {/* 編集モーダル */}
       {isEditModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
