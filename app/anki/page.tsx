@@ -71,7 +71,7 @@ export default function AnkiPage() {
   const [newKeywords, setNewKeywords] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // ★ AI自動生成用ステート
+  // AI自動生成用ステート
   const [aiTopicInput, setAiTopicInput] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
@@ -139,10 +139,9 @@ export default function AnkiPage() {
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
 
-  // ★ AIによる自動生成ハンドラー
   const handleGenerateByAi = async () => {
     if (!aiTopicInput.trim()) {
-      alert('論点名または条文番号を入力してください。（例: 民法177条の第三者、共犯からの離脱）');
+      alert('論点名または条文番号を入力してください。');
       return;
     }
 
@@ -160,7 +159,6 @@ export default function AnkiPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'AI自動生成に失敗しました');
 
-      // フォームへ自動入力
       if (data.title) setNewTitle(data.title);
       if (data.issue) setNewIssue(data.issue);
       if (data.norm) setNewNorm(data.norm);
@@ -174,7 +172,6 @@ export default function AnkiPage() {
     }
   };
 
-  // 新規カード登録処理
   const handleCreateCard = async () => {
     if (!newTitle.trim() || !newNorm.trim()) {
       alert('「論点名・タイトル」と「判例規範・理由づけ」を入力してください。');
@@ -220,7 +217,6 @@ export default function AnkiPage() {
     }
   };
 
-  // 編集モーダルを開く
   const handleOpenEditModal = () => {
     setEditId(currentCard.id);
     setEditSubject(currentCard.subject);
@@ -231,7 +227,6 @@ export default function AnkiPage() {
     setIsEditModalOpen(true);
   };
 
-  // 編集の上書き保存処理
   const handleUpdateCard = async () => {
     if (!editTitle.trim() || !editNorm.trim()) {
       alert('「論点名・タイトル」と「判例規範・理由づけ」を入力してください。');
@@ -273,7 +268,6 @@ export default function AnkiPage() {
     }
   };
 
-  // カード削除処理
   const handleDeleteCard = async () => {
     if (cards.length <= 1) {
       alert('これ以上削除できません。最低1枚のカードを保持する必要があります。');
@@ -299,7 +293,6 @@ export default function AnkiPage() {
     }
   };
 
-  // 穴埋めマスク生成
   const renderMaskedNorm = (normText: string, keywords: string[]) => {
     if (!isMaskMode || !keywords || keywords.length === 0) return normText;
     let replaced = normText;
@@ -422,83 +415,84 @@ export default function AnkiPage() {
         </div>
       </header>
 
-      {/* メインカード表示エリア */}
-      <main style={{ flex: 1, padding: '24px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: '680px', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* メインカード表示エリア（上部見切れ防止レイアウト） */}
+      <main style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ maxWidth: '780px', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
           
-          {/* カード本体 */}
+          {/* ★ カード本体：内部スクロール・ボタン固定構造 */}
           <div
             onClick={() => setIsFlipped(!isFlipped)}
             style={{
+              flex: 1,
               backgroundColor: '#ffffff',
               border: '1.5px solid #cbd5e1',
               borderRadius: '16px',
-              padding: '28px',
               boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-              minHeight: '260px',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              overflow: 'hidden',
+              minHeight: '380px',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ padding: '2px 8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px' }}>
-                  {currentCard.subject}
+            {/* カード上部バー（固定） */}
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#fcfcfd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ padding: '3px 10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px' }}>
+                {currentCard.subject}
+              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginRight: '4px' }}>
+                  {isFlipped ? '【裏面：判例規範・当てはめ】' : '【表面：問題提起・検討課題】'}
                 </span>
+                
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditModal();
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                  title="このカードを編集"
+                >
+                  ✏️ 編集
+                </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginRight: '4px' }}>
-                    {isFlipped ? '【裏面：判例規範】' : '【表面：問題提起】'}
-                  </span>
-                  
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenEditModal();
-                    }}
-                    style={{
-                      padding: '2px 8px',
-                      backgroundColor: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="このカードを編集"
-                  >
-                    ✏️ 編集
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteCard();
-                    }}
-                    style={{
-                      padding: '2px 8px',
-                      backgroundColor: '#fff1f2',
-                      border: '1px solid #fecdd3',
-                      color: '#be123c',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="このカードを削除"
-                  >
-                    🗑️ 削除
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCard();
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    backgroundColor: '#fff1f2',
+                    border: '1px solid #fecdd3',
+                    color: '#be123c',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                  title="このカードを削除"
+                >
+                  🗑️ 削除
+                </button>
               </div>
+            </div>
 
-              <h2 style={{ fontSize: '17px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>
+            {/* ★ カード本文エリア（独立スクロール：長文でも冒頭が絶対に隠れない） */}
+            <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 16px 0', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '8px' }}>
                 {currentCard.title}
               </h2>
 
@@ -507,15 +501,15 @@ export default function AnkiPage() {
                   {currentCard.issue}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#0f172a', fontFamily: 'serif', whiteSpace: 'pre-wrap' }}>
                     {renderMaskedNorm(currentCard.norm, currentCard.keywords)}
                   </div>
 
                   {currentCard.keywords && currentCard.keywords.length > 0 && (
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
                       {currentCard.keywords.map((kw, idx) => (
-                        <span key={idx} style={{ padding: '2px 8px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>
+                        <span key={idx} style={{ padding: '2px 8px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '11px', color: '#475569', fontWeight: 'bold' }}>
                           #{kw}
                         </span>
                       ))}
@@ -525,7 +519,8 @@ export default function AnkiPage() {
               )}
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* カード下部バー（固定） */}
+            <div style={{ padding: '10px 20px', borderTop: '1px solid #f1f5f9', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={(e) => {
@@ -533,8 +528,8 @@ export default function AnkiPage() {
                   setIsMaskMode(!isMaskMode);
                 }}
                 style={{
-                  padding: '3px 8px',
-                  backgroundColor: isMaskMode ? '#fef08a' : '#f8fafc',
+                  padding: '4px 10px',
+                  backgroundColor: isMaskMode ? '#fef08a' : '#ffffff',
                   border: '1px solid #cbd5e1',
                   borderRadius: '4px',
                   fontSize: '11px',
@@ -553,7 +548,7 @@ export default function AnkiPage() {
           </div>
 
           {/* 前へ・次へ コントロールバー */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             <button
               type="button"
               onClick={handlePrev}
@@ -593,7 +588,7 @@ export default function AnkiPage() {
         </div>
       </main>
 
-      {/* 新規カード作成モーダル（AI自動生成機能付き） */}
+      {/* 新規カード作成モーダル */}
       {isCreateModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -611,7 +606,6 @@ export default function AnkiPage() {
               </button>
             </div>
 
-            {/* ★ AI自動生成アシストセクション */}
             <div style={{ backgroundColor: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#166534' }}>
@@ -656,7 +650,6 @@ export default function AnkiPage() {
               </div>
             </div>
 
-            {/* 入力フォーム本体 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: '0 0 130px' }}>
