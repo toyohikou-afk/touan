@@ -271,7 +271,7 @@ export default function PracticePage() {
   const [newNorm, setNewNorm] = useState('');
   const [isSubmittingNewProblem, setIsSubmittingNewProblem] = useState(false);
 
-  // ★ 問題編集モーダル
+  // 問題編集モーダル
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSubject, setEditSubject] = useState('刑法');
   const [editTitle, setEditTitle] = useState('');
@@ -325,7 +325,7 @@ export default function PracticePage() {
       const admin = params.get('admin');
       if (admin) setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
     }
-    loadProblemsFromSupabase();
+    loadProblemsAndSyncDraft();
   }, []);
 
   const changeFontSize = (level: FontSizeLevel) => {
@@ -335,37 +335,72 @@ export default function PracticePage() {
     }
   };
 
-  const loadProblemsFromSupabase = async () => {
+  // ★ 最新の下書き・起案問題と自動同期してロードする
+  const loadProblemsAndSyncDraft = async () => {
     try {
       const { data, error } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
+      let allProblems = DEFAULT_PROBLEMS;
+
       if (!error && data && data.length > 0) {
         const validData = data.filter((d: ProblemType) => d.target_issue !== '刑法 第5問' && d.id !== 'a1111111-1111-1111-1111-111111111111');
         const normalizedData = validData.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
-        const merged = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
-        setProblems(merged);
-        setSelectedProblemId(merged[0].id);
-        loadDraftFromCloud(merged[0].id);
-      } else {
-        setProblems(DEFAULT_PROBLEMS);
-        loadDraftFromCloud(DEFAULT_PROBLEMS[0].id);
+        allProblems = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
       }
+      setProblems(allProblems);
+
+      // 1. 直近に更新された最新の下書きレコードを取得
+      const { data: latestDraft } = await supabase
+        .from('practice_drafts')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 2. ブラウザに最後に記憶されていた問題ID
+      const savedProbId = typeof window !== 'undefined' ? localStorage.getItem('touan_active_problem_id') : null;
+
+      // 優先度: ①最新下書きの問題ID -> ②記憶されたID -> ③最初の問題
+      let targetProbId = allProblems[0].id;
+      if (latestDraft && latestDraft.problem_id && allProblems.some(p => p.id === latestDraft.problem_id)) {
+        targetProbId = latestDraft.problem_id;
+      } else if (savedProbId && allProblems.some(p => p.id === savedProbId)) {
+        targetProbId = savedProbId;
+      }
+
+      setSelectedProblemId(targetProbId);
+      await loadDraftForProblem(targetProbId, latestDraft);
     } catch (e) {
-      console.warn('Supabase問題ロードスキップ:', e);
-      loadDraftFromCloud(DEFAULT_PROBLEMS[0].id);
+      console.warn('初期同期エラー:', e);
+      setSelectedProblemId(DEFAULT_PROBLEMS[0].id);
+      await loadDraftForProblem(DEFAULT_PROBLEMS[0].id);
     }
   };
 
-  const loadDraftFromCloud = async (probId: string) => {
-    try {
-      const { data } = await supabase.from('practice_drafts').select('*').eq('problem_id', probId).single();
-      if (data) {
-        if (data.user_draft) setUserDraft(data.user_draft);
-        if (data.drill_notes) setDrillNotes(data.drill_notes);
-        if (data.seconds_left && data.seconds_left > 0) setSecondsLeft(data.seconds_left);
+  // ★ 指定された問題の下書きのみを安全に読み込み（なければ必ず空にクリア）
+  const loadDraftForProblem = async (probId: string, preloadedDraft?: any) => {
+    let draftData = preloadedDraft && preloadedDraft.problem_id === probId ? preloadedDraft : null;
+    if (!draftData) {
+      try {
+        const { data } = await supabase.from('practice_drafts').select('*').eq('problem_id', probId).maybeSingle();
+        draftData = data;
+      } catch (e) {
+        console.warn('下書き取得スキップ:', e);
       }
-    } catch (e) {
-      console.warn('下書き復元スキップ:', e);
     }
+
+    if (draftData) {
+      setUserDraft(draftData.user_draft || '');
+      setDrillNotes(draftData.drill_notes || '');
+      setSecondsLeft(draftData.seconds_left && draftData.seconds_left > 0 ? draftData.seconds_left : 70 * 60);
+    } else {
+      // 該当問題に下書きがない場合は前の問題の答案を残さず綺麗にクリア
+      setUserDraft('');
+      setDrillNotes('');
+      setSecondsLeft(70 * 60);
+    }
+    setIsTimerRunning(false);
+    setAiFeedback(null);
+    setSaveSuccessMsg(null);
   };
 
   const triggerAutoSave = (draft: string, notes: string, sec: number) => {
@@ -421,16 +456,13 @@ export default function PracticePage() {
     switchProblem(newProblemId);
   };
 
+  // ★ 問題を切り替えたら localStorage にも記憶
   const switchProblem = (targetId: string) => {
     setSelectedProblemId(targetId);
-    setUserDraft('');
-    setDrillNotes('');
-    setAiFeedback(null);
-    setSaveSuccessMsg(null);
-    setSecondsLeft(70 * 60);
-    setIsTimerRunning(false);
-    setActiveTab('problem');
-    loadDraftFromCloud(targetId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('touan_active_problem_id', targetId);
+    }
+    loadDraftForProblem(targetId);
   };
 
   const handleCreateNewProblem = async () => {
@@ -462,7 +494,7 @@ export default function PracticePage() {
       setNewFact('');
       setNewNorm('');
       
-      await loadProblemsFromSupabase();
+      setProblems(prev => [newProblemData, ...prev]);
       switchProblem(newId);
     } catch (e: unknown) {
       alert(`問題登録エラー: ${e instanceof Error ? e.message : String(e)}`);
@@ -471,7 +503,6 @@ export default function PracticePage() {
     }
   };
 
-  // ★ 編集モーダルを開く
   const handleOpenEditModal = () => {
     setEditSubject(currentProblem.subject);
     setEditTitle(currentProblem.target_issue);
@@ -480,7 +511,6 @@ export default function PracticePage() {
     setIsEditModalOpen(true);
   };
 
-  // ★ 問題の更新・上書き保存処理
   const handleUpdateProblem = async () => {
     if (!editTitle.trim() || !editFact.trim()) {
       alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
@@ -502,7 +532,6 @@ export default function PracticePage() {
 
       if (error) throw error;
 
-      // ローカルステートの更新
       setProblems((prev) =>
         prev.map((p) => (p.id === currentProblem.id ? { ...p, ...updatedData } : p))
       );
@@ -805,7 +834,6 @@ export default function PracticePage() {
               </button>
             </div>
 
-            {/* ★ 操作ボタン群：新規・編集・削除 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
                 type="button"
@@ -1197,7 +1225,7 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* ★ 問題編集モーダル */}
+      {/* 問題編集モーダル */}
       {isEditModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
