@@ -263,7 +263,7 @@ export default function PracticePage() {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
 
-  // 新規問題モーダル
+  // モーダル
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('刑法');
   const [newTitle, setNewTitle] = useState('');
@@ -271,32 +271,12 @@ export default function PracticePage() {
   const [newNorm, setNewNorm] = useState('');
   const [isSubmittingNewProblem, setIsSubmittingNewProblem] = useState(false);
 
-  // 問題編集モーダル
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSubject, setEditSubject] = useState('刑法');
   const [editTitle, setEditTitle] = useState('');
   const [editFact, setEditFact] = useState('');
   const [editNorm, setEditNorm] = useState('');
   const [isUpdatingProblem, setIsUpdatingProblem] = useState(false);
-
-  const availableSubjects = useMemo(() => {
-    const subs = Array.from(new Set(problems.map((p) => p.subject).filter(Boolean)));
-    return subs.sort((a, b) => {
-      const idxA = SUBJECT_ORDER.indexOf(a);
-      const idxB = SUBJECT_ORDER.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
-  }, [problems]);
-
-  const filteredProblems = useMemo(() => {
-    if (selectedSubjectFilter === 'ALL') return problems;
-    return problems.filter((p) => p.subject === selectedSubjectFilter);
-  }, [problems, selectedSubjectFilter]);
-
-  const currentProblem = problems.find((p) => p.id === selectedProblemId) || filteredProblems[0] || DEFAULT_PROBLEMS[0];
 
   const [userDraft, setUserDraft] = useState('');
   const [drillNotes, setDrillNotes] = useState('');
@@ -316,6 +296,38 @@ export default function PracticePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ★ 表示対象の問題を決定（selectedProblemId を最優先）
+  const currentProblem = useMemo(() => {
+    const found = problems.find((p) => p.id === selectedProblemId);
+    if (found) return found;
+    return problems[0] || DEFAULT_PROBLEMS[0];
+  }, [problems, selectedProblemId]);
+
+  const availableSubjects = useMemo(() => {
+    const subs = Array.from(new Set(problems.map((p) => p.subject).filter(Boolean)));
+    return subs.sort((a, b) => {
+      const idxA = SUBJECT_ORDER.indexOf(a);
+      const idxB = SUBJECT_ORDER.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [problems]);
+
+  // ★ フィルターされた問題リスト（現在選択中の問題はフィルター対象外でも必ず含める）
+  const filteredProblems = useMemo(() => {
+    let list = problems;
+    if (selectedSubjectFilter !== 'ALL') {
+      list = problems.filter((p) => p.subject === selectedSubjectFilter);
+      // もし現在選択中の問題がフィルターで除外されていたら、その問題を先頭に追加して選択状態を保護
+      if (currentProblem && !list.some((p) => p.id === currentProblem.id)) {
+        list = [currentProblem, ...list];
+      }
+    }
+    return list;
+  }, [problems, selectedSubjectFilter, currentProblem]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedFs = localStorage.getItem('touan_font_size') as FontSizeLevel;
@@ -325,7 +337,7 @@ export default function PracticePage() {
       const admin = params.get('admin');
       if (admin) setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
     }
-    loadProblemsAndSyncDraft();
+    initSessionAndSyncLatest();
   }, []);
 
   const changeFontSize = (level: FontSizeLevel) => {
@@ -335,20 +347,28 @@ export default function PracticePage() {
     }
   };
 
-  // ★ 最新の下書き・起案問題と自動同期してロードする
-  const loadProblemsAndSyncDraft = async () => {
+  // ★ 最新答案（下書きまたは提出履歴）から問題と答案を完全同期してロード
+  const initSessionAndSyncLatest = async () => {
     try {
-      const { data, error } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
+      // 1. 問題リストを取得
+      const { data: probData } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
       let allProblems = DEFAULT_PROBLEMS;
-
-      if (!error && data && data.length > 0) {
-        const validData = data.filter((d: ProblemType) => d.target_issue !== '刑法 第5問' && d.id !== 'a1111111-1111-1111-1111-111111111111');
-        const normalizedData = validData.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
-        allProblems = [...normalizedData, ...DEFAULT_PROBLEMS.filter(dp => !normalizedData.some(d => d.id === dp.id))];
+      if (probData && probData.length > 0) {
+        const valid = probData.filter((d: ProblemType) => d.target_issue !== '刑法 第5問' && d.id !== 'a1111111-1111-1111-1111-111111111111');
+        const normalized = valid.map((d: ProblemType) => ({ ...d, time_limit_minutes: 70 }));
+        allProblems = [...normalized, ...DEFAULT_PROBLEMS.filter(dp => !normalized.some(d => d.id === dp.id))];
       }
       setProblems(allProblems);
 
-      // 1. 直近に更新された最新の下書きレコードを取得
+      // 2. 直近に提出された最新答案（submissions）を取得
+      const { data: latestSubmission } = await supabase
+        .from('submissions')
+        .select('problem_id, user_draft, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 3. 直近に保存された下書き（practice_drafts）を取得
       const { data: latestDraft } = await supabase
         .from('practice_drafts')
         .select('*')
@@ -356,44 +376,62 @@ export default function PracticePage() {
         .limit(1)
         .maybeSingle();
 
-      // 2. ブラウザに最後に記憶されていた問題ID
-      const savedProbId = typeof window !== 'undefined' ? localStorage.getItem('touan_active_problem_id') : null;
+      // 4. 最も新しい起案データ（下書き vs 提出）を判定
+      let candidateProbId = allProblems[0].id;
+      let initialDraftText = '';
+      let initialDrillNotes = '';
+      let initialSeconds = 70 * 60;
 
-      // 優先度: ①最新下書きの問題ID -> ②記憶されたID -> ③最初の問題
-      let targetProbId = allProblems[0].id;
-      if (latestDraft && latestDraft.problem_id && allProblems.some(p => p.id === latestDraft.problem_id)) {
-        targetProbId = latestDraft.problem_id;
-      } else if (savedProbId && allProblems.some(p => p.id === savedProbId)) {
-        targetProbId = savedProbId;
+      const draftTime = latestDraft?.updated_at ? new Date(latestDraft.updated_at).getTime() : 0;
+      const subTime = latestSubmission?.created_at ? new Date(latestSubmission.created_at).getTime() : 0;
+
+      if (draftTime >= subTime && latestDraft?.problem_id && allProblems.some(p => p.id === latestDraft.problem_id)) {
+        candidateProbId = latestDraft.problem_id;
+        initialDraftText = latestDraft.user_draft || '';
+        initialDrillNotes = latestDraft.drill_notes || '';
+        if (latestDraft.seconds_left) initialSeconds = latestDraft.seconds_left;
+      } else if (latestSubmission?.problem_id && allProblems.some(p => p.id === latestSubmission.problem_id)) {
+        candidateProbId = latestSubmission.problem_id;
+        initialDraftText = latestSubmission.user_draft || '';
+      } else {
+        const savedProbId = typeof window !== 'undefined' ? localStorage.getItem('touan_active_problem_id') : null;
+        if (savedProbId && allProblems.some(p => p.id === savedProbId)) {
+          candidateProbId = savedProbId;
+        }
       }
 
-      setSelectedProblemId(targetProbId);
-      await loadDraftForProblem(targetProbId, latestDraft);
+      // 5. 問題と答案をセットし、科目フィルターも自動連動
+      const matchedProb = allProblems.find(p => p.id === candidateProbId) || allProblems[0];
+      setSelectedProblemId(matchedProb.id);
+      setSelectedSubjectFilter('ALL'); // 全表示にしてドロップダウンの化けを防ぐ
+      setUserDraft(initialDraftText);
+      setDrillNotes(initialDrillNotes);
+      setSecondsLeft(initialSeconds);
     } catch (e) {
-      console.warn('初期同期エラー:', e);
-      setSelectedProblemId(DEFAULT_PROBLEMS[0].id);
-      await loadDraftForProblem(DEFAULT_PROBLEMS[0].id);
+      console.warn('起案セッション初期化スキップ:', e);
     }
   };
 
-  // ★ 指定された問題の下書きのみを安全に読み込み（なければ必ず空にクリア）
-  const loadDraftForProblem = async (probId: string, preloadedDraft?: any) => {
-    let draftData = preloadedDraft && preloadedDraft.problem_id === probId ? preloadedDraft : null;
-    if (!draftData) {
-      try {
-        const { data } = await supabase.from('practice_drafts').select('*').eq('problem_id', probId).maybeSingle();
-        draftData = data;
-      } catch (e) {
-        console.warn('下書き取得スキップ:', e);
-      }
+  // ★ 問題を切り替える際の完全同期処理
+  const switchProblem = async (targetId: string) => {
+    setSelectedProblemId(targetId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('touan_active_problem_id', targetId);
     }
 
-    if (draftData) {
-      setUserDraft(draftData.user_draft || '');
-      setDrillNotes(draftData.drill_notes || '');
-      setSecondsLeft(draftData.seconds_left && draftData.seconds_left > 0 ? draftData.seconds_left : 70 * 60);
-    } else {
-      // 該当問題に下書きがない場合は前の問題の答案を残さず綺麗にクリア
+    // 該当問題の下書きを取得（なければ空クリア）
+    try {
+      const { data: draft } = await supabase.from('practice_drafts').select('*').eq('problem_id', targetId).maybeSingle();
+      if (draft) {
+        setUserDraft(draft.user_draft || '');
+        setDrillNotes(draft.drill_notes || '');
+        setSecondsLeft(draft.seconds_left && draft.seconds_left > 0 ? draft.seconds_left : 70 * 60);
+      } else {
+        setUserDraft('');
+        setDrillNotes('');
+        setSecondsLeft(70 * 60);
+      }
+    } catch {
       setUserDraft('');
       setDrillNotes('');
       setSecondsLeft(70 * 60);
@@ -403,20 +441,20 @@ export default function PracticePage() {
     setSaveSuccessMsg(null);
   };
 
-  const triggerAutoSave = (draft: string, notes: string, sec: number) => {
+  const triggerAutoSave = (probId: string, draft: string, notes: string, sec: number) => {
     setSyncStatus('saving');
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(async () => {
       try {
         await supabase.from('practice_drafts').upsert({
-          problem_id: currentProblem.id,
+          problem_id: probId,
           user_draft: draft,
           drill_notes: notes,
           seconds_left: sec,
           updated_at: new Date().toISOString()
         });
         setSyncStatus('synced');
-      } catch (err) {
+      } catch {
         setSyncStatus('offline');
       }
     }, 1500);
@@ -424,12 +462,12 @@ export default function PracticePage() {
 
   const handleDraftChange = (text: string) => {
     setUserDraft(text);
-    triggerAutoSave(text, drillNotes, secondsLeft);
+    triggerAutoSave(currentProblem.id, text, drillNotes, secondsLeft);
   };
 
   const handleDrillNotesChange = (text: string) => {
     setDrillNotes(text);
-    triggerAutoSave(userDraft, text, secondsLeft);
+    triggerAutoSave(currentProblem.id, userDraft, text, secondsLeft);
   };
 
   const handleInsertDrillToDraft = () => {
@@ -444,25 +482,18 @@ export default function PracticePage() {
   };
 
   const handleSubjectChange = (newSubject: string) => {
-    if (newSubject === selectedSubjectFilter) return;
     setSelectedSubjectFilter(newSubject);
-    const targetList = newSubject === 'ALL' ? problems : problems.filter((p) => p.subject === newSubject);
-    const nextProb = targetList[0] || DEFAULT_PROBLEMS[0];
-    switchProblem(nextProb.id);
+    if (newSubject !== 'ALL') {
+      const candidates = problems.filter((p) => p.subject === newSubject);
+      if (candidates.length > 0 && !candidates.some((p) => p.id === currentProblem.id)) {
+        switchProblem(candidates[0].id);
+      }
+    }
   };
 
   const handleProblemChange = (newProblemId: string) => {
     if (newProblemId === selectedProblemId) return;
     switchProblem(newProblemId);
-  };
-
-  // ★ 問題を切り替えたら localStorage にも記憶
-  const switchProblem = (targetId: string) => {
-    setSelectedProblemId(targetId);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('touan_active_problem_id', targetId);
-    }
-    loadDraftForProblem(targetId);
   };
 
   const handleCreateNewProblem = async () => {
@@ -576,13 +607,13 @@ export default function PracticePage() {
       timer = setInterval(() => {
         setSecondsLeft((s) => {
           const nextSec = s - 1;
-          if (nextSec % 30 === 0) triggerAutoSave(userDraft, drillNotes, nextSec);
+          if (nextSec % 30 === 0) triggerAutoSave(currentProblem.id, userDraft, drillNotes, nextSec);
           return nextSec;
         });
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isTimerRunning, secondsLeft, userDraft, drillNotes]);
+  }, [isTimerRunning, secondsLeft, userDraft, drillNotes, currentProblem.id]);
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -697,7 +728,7 @@ export default function PracticePage() {
                 color: '#0f172a',
                 cursor: 'pointer',
                 outline: 'none',
-                maxWidth: '260px'
+                maxWidth: '280px'
               }}
             >
               {filteredProblems.map((p) => (
@@ -895,6 +926,9 @@ export default function PracticePage() {
           <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
             {activeTab === 'problem' && (
               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
+                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                  【{currentProblem.subject}】{currentProblem.target_issue}
+                </div>
                 {currentProblem.fact_context}
               </div>
             )}
