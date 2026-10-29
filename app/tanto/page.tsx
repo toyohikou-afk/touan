@@ -67,12 +67,13 @@ function TantoPracticeContent() {
       setStats({ correct: 0, total: 0 });
       setStreak(0);
 
+      // ★ limit(30) を外し、作成日時またはIDで全問（上限100）取得するように変更
       const { data: qData } = await supabase
         .from('tanto_questions')
         .select('*')
         .eq('summary_tag', currentSummaryTag)
-        .order('id', { ascending: true })
-        .limit(30);
+        .order('created_at', { ascending: true })
+        .limit(100);
 
       const loaded = qData || [];
       setQuestions(loaded);
@@ -192,11 +193,26 @@ function TantoPracticeContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 max-w-lg mx-auto select-none">
       <header className="border-b border-slate-800 pb-3 pt-1">
-        <div className="flex justify-between items-center mb-2">
-          <Link href="/" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-950/50 border border-indigo-800/60 px-2.5 py-1 rounded-lg">
-            ← 論証集トップ
+        {/* トップバー：論証集リンク ＆ ★論文演習（practice）直接リンク */}
+        <div className="flex justify-between items-center mb-2.5 gap-2">
+          <Link href="/" className="text-xs text-slate-400 hover:text-slate-200 font-semibold bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg shrink-0">
+            ← 論証集
           </Link>
-          <div className="flex items-center gap-1.5 text-[11px]">
+
+          {/* ★ touan-psi /practice への統合ボタン */}
+          <a
+            href="https://touan-psi.vercel.app/practice"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white font-bold bg-indigo-950/80 border border-indigo-700/80 hover:bg-indigo-900 px-3 py-1.5 rounded-lg shadow-sm transition"
+          >
+            <span>📝 論文演習へ</span>
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+
+          <div className="flex items-center gap-1 text-[11px] shrink-0">
             {syncing ? (
               <span className="text-amber-400 animate-pulse font-mono">同期中...</span>
             ) : (
@@ -204,7 +220,7 @@ function TantoPracticeContent() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>同期中
               </span>
             )}
-            <button onClick={() => setIsEditingKey(!isEditingKey)} className="text-slate-400 hover:text-slate-200 underline font-mono ml-1">
+            <button onClick={() => setIsEditingKey(!isEditingKey)} className="text-slate-400 hover:text-slate-200 underline font-mono ml-0.5">
               [{syncKey}]
             </button>
           </div>
