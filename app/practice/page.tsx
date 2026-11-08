@@ -196,12 +196,14 @@ const MASTER_STATUTES = [
   // 憲法
   { law: '憲法', num: '第13条', title: '個人の尊重・幸福追求権', text: 'すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。' },
   { law: '憲法', num: '第14条第1項', title: '法の下の平等', text: 'すべて国民は、法の下に平等であつて、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。' },
+  { law: '憲法', num: '第15条', title: '公務員の選定罷免権及び性質・普通選挙の保障', text: '1 公務員を選定し、及びこれを罷免することは、国民固有の権利である。\n2 すべて公務員は、全体の奉仕者であつて、一部の奉仕者ではない。\n3 公務員の選挙については、成年者による普通選挙を保障する。\n4 すべて選挙における投票の秘密は、これを侵してはならない。選挙人は、その選択に関し公的にも私的にも責任を問はれない。' },
   { law: '憲法', num: '第21条', title: '表現の自由', text: '1 集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。\n2 検閲は、これをしてはならない。通信の秘密は、これを侵してはならない。' },
   { law: '憲法', num: '第31条', title: '適正手続の保障', text: '何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。' },
 
   // 民法（総則・物権）
   { law: '民法', num: '第3条の2', title: '意思能力', text: '法律行為の当事者が意思表示をした時に意思能力を有しなかったときは、その法律行為は、無効とする。' },
   { law: '民法', num: '第5条', title: '未成年者の法律行為', text: '1 未成年者が法律行為をするには、その法定代理人の同意を得なければならない。ただし、単に権利を得、又は義務を免れる法律行為については、この限りでない。\n2 前項の規定に反する法律行為は、取り消すことができる。' },
+  { law: '民法', num: '第15条', title: '保佐開始の審判', text: '1 精神上の障害により事理を弁識する能力が著しく不十分である者については、家庭裁判所は、本人、配偶者、四親等内の親族、後見人、後見監督人、補助人、補助監督人又は検察官の請求により、保佐開始の審判をすることができる。\n2 本人以外の者の請求により保佐開始の審判をするには、本人の同意がなければならない。' },
   { law: '民法', num: '第21条', title: '制限行為能力者の詐術', text: '制限行為能力者が行為能力者であることを信じさせるため詐術を用いたときは、その行為を取り消すことができない。' },
   { law: '民法', num: '第94条', title: '虚偽表示', text: '1 相手方と通じてした虚偽の意思表示は、無効とする。\n2 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
   { law: '民法', num: '第95条', title: '錯誤', text: '1 意思表示は、次に掲げる錯誤に基づくものであって、その錯誤が法律行為の目的及び取引上の社会通念に照らして重要なものであるときは、取り消すことができる。\n一 意思表示に対応する意思を欠く錯誤\n二 表意者が法律行為の基礎とした事情についてのその認識が真実に反する錯誤\n2 前項第二号の規定による意思表示の取消しは、その事情が法律行為の基礎とされていることが表示されていたときに限り、することができる。' },
@@ -733,9 +735,10 @@ export default function PracticePage() {
 
   const currentDrill = SUBJECT_DRILL_GUIDES[currentProblem.subject] || SUBJECT_DRILL_GUIDES['刑法'];
 
-  // ★ 検索の表記揺れ（全角・半角・第・条）を正規化する関数
-  const normalizeQuery = (text: string) => {
-    return text
+  // ★ 検索の表記揺れ（全角・半角・第・条）を安全に正規化する関数（null/undefinedガード付き）
+  const normalizeQuery = (text?: string | null) => {
+    if (!text) return '';
+    return String(text)
       .toLowerCase()
       .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
       .replace(/[第条]/g, '')
@@ -1082,13 +1085,22 @@ export default function PracticePage() {
 
             {activeTab === 'statute' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* 検索入力欄：onSubmitでe.preventDefault()を行い、Enterキーでのリロードを完全防止 */}
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                >
                   <input
                     type="text"
-                    placeholder="条文番号または語句 (例: 177, 94, 709, 21, 詐害行為, 取締役)"
+                    placeholder="条文番号または語句 (例: 15, 177, 94, 709, 詐害行為, 取締役)"
                     value={statuteSearchQuery}
                     onChange={(e) => setStatuteSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff' }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault(); // Enterキー単独押下でも画面全体のリロードを抑止
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
                   />
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {['ALL', '憲法', '行政法', '民法', '商法', '刑法', '刑事訴訟法', '民事訴訟法', '独占禁止法'].map((law) => (
@@ -1111,35 +1123,38 @@ export default function PracticePage() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </form>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(() => {
                     const combined = [
                       ...(currentProblem.statutes || []).map(s => ({
-                        law: s.law || currentProblem.subject,
+                        law: s.law || currentProblem.subject || '',
                         num: s.num || '',
-                        title: s.title,
-                        text: s.text
+                        title: s.title || '',
+                        text: s.text || ''
                       })),
                       ...MASTER_STATUTES
                     ];
                     
-                    const qRaw = statuteSearchQuery.trim();
+                    const qRaw = (statuteSearchQuery || '').trim();
                     const qNorm = normalizeQuery(qRaw);
 
                     const filtered = combined.filter(item => {
-                      // 法令フィルター
-                      const matchLaw = statuteLawFilter === 'ALL' || item.law.includes(statuteLawFilter) || (statuteLawFilter === '商法' && item.law === '会社法');
+                      const itemLaw = item.law || '';
+                      const matchLaw =
+                        statuteLawFilter === 'ALL' ||
+                        itemLaw.includes(statuteLawFilter) ||
+                        (statuteLawFilter === '商法' && itemLaw === '会社法');
+
                       if (!qRaw) return matchLaw;
 
-                      // 表記揺れ（177, １７７, 第177条）に対応した判定
                       const itemNumNorm = normalizeQuery(item.num || '');
-                      const itemTitleNorm = item.title.toLowerCase();
-                      const itemTextNorm = item.text.toLowerCase();
+                      const itemTitleNorm = (item.title || '').toLowerCase();
+                      const itemTextNorm = (item.text || '').toLowerCase();
 
                       const matchQuery =
-                        itemNumNorm.includes(qNorm) ||
+                        (itemNumNorm.length > 0 && itemNumNorm.includes(qNorm)) ||
                         itemTitleNorm.includes(qRaw.toLowerCase()) ||
                         itemTextNorm.includes(qRaw.toLowerCase());
 
@@ -1149,7 +1164,7 @@ export default function PracticePage() {
                     if (filtered.length === 0) {
                       return (
                         <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>
-                          該当する条文が見つかりませんでした。「177」「94」「21」「共同正犯」など数字やキーワードを変えてお試しください。
+                          該当する条文が見つかりませんでした。「15」「177」「94」「21」「共同正犯」など数字やキーワードを変えてお試しください。
                         </div>
                       );
                     }
