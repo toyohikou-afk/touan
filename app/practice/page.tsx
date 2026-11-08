@@ -191,13 +191,77 @@ const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
   }
 };
 
+// ★ 主要頻出法令マスター（条文検索用）
 const MASTER_STATUTES = [
+  // 憲法
+  { law: '憲法', num: '第13条', title: '個人の尊重・幸福追求権', text: 'すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。' },
+  { law: '憲法', num: '第14条第1項', title: '法の下の平等', text: 'すべて国民は、法の下に平等であつて、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。' },
   { law: '憲法', num: '第21条', title: '表現の自由', text: '1 集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。\n2 検閲は、これをしてはならない。通信の秘密は、これを侵してはならない。' },
+  { law: '憲法', num: '第31条', title: '適正手続の保障', text: '何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。' },
+
+  // 民法（総則・物権）
+  { law: '民法', num: '第3条の2', title: '意思能力', text: '法律行為の当事者が意思表示をした時に意思能力を有しなかったときは、その法律行為は、無効とする。' },
+  { law: '民法', num: '第5条', title: '未成年者の法律行為', text: '1 未成年者が法律行為をするには、その法定代理人の同意を得なければならない。ただし、単に権利を得、又は義務を免れる法律行為については、この限りでない。\n2 前項の規定に反する法律行為は、取り消すことができる。' },
+  { law: '民法', num: '第21条', title: '制限行為能力者の詐術', text: '制限行為能力者が行為能力者であることを信じさせるため詐術を用いたときは、その行為を取り消すことができない。' },
+  { law: '民法', num: '第94条', title: '虚偽表示', text: '1 相手方と通じてした虚偽の意思表示は、無効とする。\n2 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
+  { law: '民法', num: '第95条', title: '錯誤', text: '1 意思表示は、次に掲げる錯誤に基づくものであって、その錯誤が法律行為の目的及び取引上の社会通念に照らして重要なものであるときは、取り消すことができる。\n一 意思表示に対応する意思を欠く錯誤\n二 表意者が法律行為の基礎とした事情についてのその認識が真実に反する錯誤\n2 前項第二号の規定による意思表示の取消しは、その事情が法律行為の基礎とされていることが表示されていたときに限り、することができる。' },
+  { law: '民法', num: '第96条', title: '詐欺又は強迫', text: '1 詐欺又は強迫による意思表示は、取り消すことができる。\n2 相手方に対する意思表示について第三者が詐欺を行った場合においては、相手方がその事実を知り、又は知ることができたときに限り、その意思表示を取り消すことができる。\n3 前二項の規定による詐欺による意思表示の取消しは、善意でかつ過失がない第三者に対抗することができない。' },
+  { law: '民法', num: '第110条', title: '権限外の行為の表見代理', text: '前条第一項本文の規定は、代理人がその権限外の行為をした場合において、第三者が代理人の権限があると信ずべき正当な理由があるときについて準用する。' },
+  { law: '民法', num: '第177条', title: '不動産に関する物権の変動の対抗要件', text: '不動産に関する物権の得喪及び変更は、不動産登記法その他の登記に関する法律の定めるところに従いその登記をしなければ、第三者に対抗することができない。' },
+  { law: '民法', num: '第192条', title: '即時取得', text: '取引行為によって、平穏に、かつ、公然と動産の占有を始めた者は、善意であり、かつ、過失がないときは、即時にその動産について行使する権利を取得する。' },
+
+  // 民法（債権・契約・不法行為）
+  { law: '民法', num: '第415条', title: '債務不履行による損害賠償', text: '1 債務者がその債務の本旨に従った履行をしないとき又は債務の履行が不能であるときは、債権者は、これによって生じた損害の賠償を請求することができる。ただし、その債務の不履行が契約その他の債務の発生原因及び取引上の社会通念に照らして債務者の責めに帰することができない事由によるものであるときは、この限りでない。' },
+  { law: '民法', num: '第423条', title: '債権者代位権の要件', text: '1 債権者は、自己の債権を保全するため必要があるときは、債務者に属する権利を行使することができる。ただし、債務者の一身に専属する権利及び差押えを禁ぜられた権利は、この限りでない。' },
+  { law: '民法', num: '第424条', title: '詐害行為取消請求', text: '1 債権者は、債務者が債権者を害することを知ってした行為の取消しを裁判所に請求することができる。ただし、その行為によって利益を受けた者がその行為の時において債権者を害することを知らなかったときは、この限りでない。' },
   { law: '民法', num: '第482条', title: '代物弁済', text: '債務者が、債権者の承諾を得て、その負担した給付に代えて他の給付をしたときは、その給付は、弁済と同一の効力を有する。' },
+  { law: '民法', num: '第501条', title: '弁済による代位の効力', text: '1 前二条の規定により債権者に代位した者は、債権の効力及び担保としてその債権者が有していた一切の権利を行使することができる。' },
+  { law: '民法', num: '第541条', title: '催告による解除', text: '当事者の一方がその債務を履行しない場合において、相手方が相当の期間を定めてその履行の催告をし、その期間内に履行がないときは、相手方は、契約の解除をすることができる。' },
+  { law: '民法', num: '第562条', title: '買主の追完請求権', text: '1 引き渡された目的物が種類、品質又は数量に関して契約の内容に適合しないものであるときは、買主は、売主に対し、目的物の修補、代替物の引渡し又は不足分の引渡しによる履行の追完を請求することができる。' },
+  { law: '民法', num: '第709条', title: '不法行為による損害賠償', text: '故意又は過失によって他人の権利又は法律上保護される利益を侵害した者は、これによって生じた損害を賠償する責任を負う。' },
+  { law: '民法', num: '第715条', title: '使用者等の責任', text: '1 ある事業のために他人を使用する者は、被用者がその事業の執行について第三者に加えた損害を賠償する責任を負う。ただし、使用者が被用者の選任及びその事業の監督について相当の注意をしたとき、又は相当の注意をしても損害が生ずべきであったときは、この限りでない。' },
+
+  // 刑法
+  { law: '刑法', num: '第36条', title: '正当防衛', text: '1 急迫不正の侵害に対して、自己又は他人の権利を防衛するため、やむを得ずにした行為は、罰しない。\n2 防衛の程度を超えた行為は、情状により、その刑を減軽し、又は免除することができる。' },
+  { law: '刑法', num: '第38条', title: '故意', text: '1 罪を犯す意思がない行為は、罰しない。ただし、法律に特別の規定がある場合は、この限りでない。' },
   { law: '刑法', num: '第60条', title: '共同正犯', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
+  { law: '刑法', num: '第61条', title: '教唆', text: '1 人を教唆して犯罪を実行させた者には、正犯の刑を科する。' },
+  { law: '刑法', num: '第62条', title: '幇助', text: '1 正犯を幇助した者は、従犯とする。' },
+  { law: '刑法', num: '第199条', title: '殺人', text: '人を殺した者は、死刑又は無期若しくは五年以上の懲役に処する。' },
+  { law: '刑法', num: '第204条', title: '傷害', text: '人の身体を傷害した者は、十五年以下の懲役又は五十万円以下の罰金に処する。' },
+  { law: '刑法', num: '第235条', title: '窃盗', text: '他人の財物を窃取した者は、窃盗の罪とし、十年以下の懲役又は五十万円以下の罰金に処する。' },
+  { law: '刑法', num: '第236条', title: '強盗', text: '1 暴行又は脅迫を用いて他人の財物を強取した者は、強盗の罪とし、五年以上の有期懲役に処する。' },
   { law: '刑法', num: '第240条', title: '強盗致死傷', text: '強盗が、人を負傷させたときは無期又は六年以上の懲役に処し、死亡させたときは死刑又は無期懲役に処する。' },
-  { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。' },
-  { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' }
+  { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。\n2 前項の方法により、財産上不法の利益を得、又は他人にこれを得させた者も、同項と同様とする。' },
+  { law: '刑法', num: '第252条', title: '横領', text: '1 自己の占有する他人の物を横領した者は、五年以下の懲役に処する。' },
+
+  // 商法・会社法
+  { law: '会社法', num: '第199条', title: '募集株式の募集事項の決定', text: '1 株式会社は、その発行する株式を引き受ける者の募集をしようとするときは、その都度、募集株式について次に掲げる事項を定めなければならない。' },
+  { law: '会社法', num: '第356条', title: '競業及び利益相反取引の制限', text: '1 取締役は、次に掲げる場合には、株主総会（取締役会設置会社にあっては、取締役会）において、当該取引につき重要な事実を開示し、その承認を受けなければならない。\n一 取締役が自己又は第三者のために株式会社の事業の部類に属する取引をしようとするとき。\n二 取締役が自己又は第三者のために株式会社と取引をしようとするとき。' },
+  { law: '会社法', num: '第423条', title: '役員等の株式会社に対する損害賠償責任', text: '1 取締役、会計参与、監査役、執行役又は会計監査人は、その任務を怠ったときは、株式会社に対し、これによって生じた損害を賠償する責任を負う。' },
+  { law: '会社法', num: '第429条', title: '役員等の第三者に対する損害賠償責任', text: '1 役員等がその職務を行うについて悪意又は重大な過失があったときは、当該役員等は、これによって第三者に生じた損害を賠償する責任を負う。' },
+  { law: '会社法', num: '第828条', title: '会社の組織に関する行為の無効の訴え', text: '1 次の各号に掲げる行為の無効は、当該各号に定める期間内に、訴えをもってのみ主張することができる。\n一 株式会社の設立 成立の日から二年以内\n二 新株発行 効力発生日から六箇月以内（非公開会社は一年以内）' },
+
+  // 民事訴訟法
+  { law: '民事訴訟法', num: '第114条', title: '既判力の範囲', text: '1 確定判決は、主文に包含するものに限り、既判力を有する。\n2 相殺のために主張した請求の成立又は不成立の判断は、相殺をもって対抗した額について既判力を有する。' },
+  { law: '民事訴訟法', num: '第142条', title: '二重起訴の禁止', text: '裁判所に係属する事件については、当事者は、更に訴えを提起することができない。' },
+  { law: '民事訴訟法', num: '第220条', title: '文書提出義務', text: '次に掲げる場合において、所持者は、その提出を拒むことができない。\n四 専ら文書の所持者の利用に供するための文書（自己利用文書）に該当しないとき。' },
+  { law: '民事訴訟法', num: '第228条第4項', title: '私文書の成立の真正の推定', text: '私文書は、本人又はその代理人の署名又は押印があるときは、真正に成立したものと推定する。' },
+
+  // 刑事訴訟法
+  { law: '刑事訴訟法', num: '第197条第1項', title: '捜査の基本原則', text: '捜査については、その目的を達するため必要な取調をすることができる。但し、強制の処分は、この法律に特別の定のある場合でなければ、これをすることができない。' },
+  { law: '刑事訴訟法', num: '第218条第1項', title: '令状による捜索・差押え・検証', text: '検察官、検察事務官又は司法警察職員は、犯罪の捜査をするについて必要があるときは、裁判官の発する令状により、差押、捜索又は検証をすることができる。' },
+  { law: '刑事訴訟法', num: '第312条第1項', title: '訴因の変更', text: '裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、訴因又は罰条の追加、撤回又は変更を許さなければならない。' },
+  { law: '刑事訴訟法', num: '第320条第1項', title: '伝聞証拠の禁止', text: '第三百二十一条乃至第三百二十八条に規定する場合を除いては、公判期日における供述に代へて書面を証拠とし、又は公判期日外における他の者の供述を内容とする供述を証拠とすることはできない。' },
+
+  // 行政法
+  { law: '行政事件訴訟法', num: '第3条第2項', title: '処分の取消しの訴え', text: 'この法律において「処分の取消しの訴え」とは、行政庁の処分その他公権力の行使に当たる行為の取消しを求める訴訟をいう。' },
+  { law: '行政事件訴訟法', num: '第9条', title: '原告適格', text: '1 処分の取消しの訴え及び裁決の取消しの訴えは、当該処分又は裁決の取消しを求めるにつき法律上の利益を有する者に限り、提起することができる。\n2 裁判所は、処分又は裁決の相手方以外の者が法律上の利益を有するかどうかを判断するに当たっては、当該処分又は裁決の根拠となる法令の規定の趣旨及び目的等を参酌しなければならない。' },
+  { law: '行政事件訴訟法', num: '第30条', title: '裁量処分の取消し', text: '行政庁の裁量処分については、裁量権の範囲をこえ又はその濫用があった場合に限り、裁判所は、その処分を取り消すことができる。' },
+
+  // 経済法
+  { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' },
+  { law: '独占禁止法', num: '第3条', title: '私的独占及び不当な取引制限の禁止', text: '事業者は、私的独占又は不当な取引制限をしてはならない。' }
 ];
 
 type ProblemType = {
@@ -296,7 +360,6 @@ export default function PracticePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ★ 表示対象の問題を決定（selectedProblemId を最優先）
   const currentProblem = useMemo(() => {
     const found = problems.find((p) => p.id === selectedProblemId);
     if (found) return found;
@@ -315,12 +378,10 @@ export default function PracticePage() {
     });
   }, [problems]);
 
-  // ★ フィルターされた問題リスト（現在選択中の問題はフィルター対象外でも必ず含める）
   const filteredProblems = useMemo(() => {
     let list = problems;
     if (selectedSubjectFilter !== 'ALL') {
       list = problems.filter((p) => p.subject === selectedSubjectFilter);
-      // もし現在選択中の問題がフィルターで除外されていたら、その問題を先頭に追加して選択状態を保護
       if (currentProblem && !list.some((p) => p.id === currentProblem.id)) {
         list = [currentProblem, ...list];
       }
@@ -347,10 +408,8 @@ export default function PracticePage() {
     }
   };
 
-  // ★ 最新答案（下書きまたは提出履歴）から問題と答案を完全同期してロード
   const initSessionAndSyncLatest = async () => {
     try {
-      // 1. 問題リストを取得
       const { data: probData } = await supabase.from('problems').select('*').order('created_at', { ascending: false });
       let allProblems = DEFAULT_PROBLEMS;
       if (probData && probData.length > 0) {
@@ -360,7 +419,6 @@ export default function PracticePage() {
       }
       setProblems(allProblems);
 
-      // 2. 直近に提出された最新答案（submissions）を取得
       const { data: latestSubmission } = await supabase
         .from('submissions')
         .select('problem_id, user_draft, created_at')
@@ -368,7 +426,6 @@ export default function PracticePage() {
         .limit(1)
         .maybeSingle();
 
-      // 3. 直近に保存された下書き（practice_drafts）を取得
       const { data: latestDraft } = await supabase
         .from('practice_drafts')
         .select('*')
@@ -376,7 +433,6 @@ export default function PracticePage() {
         .limit(1)
         .maybeSingle();
 
-      // 4. 最も新しい起案データ（下書き vs 提出）を判定
       let candidateProbId = allProblems[0].id;
       let initialDraftText = '';
       let initialDrillNotes = '';
@@ -400,10 +456,9 @@ export default function PracticePage() {
         }
       }
 
-      // 5. 問題と答案をセットし、科目フィルターも自動連動
       const matchedProb = allProblems.find(p => p.id === candidateProbId) || allProblems[0];
       setSelectedProblemId(matchedProb.id);
-      setSelectedSubjectFilter('ALL'); // 全表示にしてドロップダウンの化けを防ぐ
+      setSelectedSubjectFilter('ALL');
       setUserDraft(initialDraftText);
       setDrillNotes(initialDrillNotes);
       setSecondsLeft(initialSeconds);
@@ -412,14 +467,12 @@ export default function PracticePage() {
     }
   };
 
-  // ★ 問題を切り替える際の完全同期処理
   const switchProblem = async (targetId: string) => {
     setSelectedProblemId(targetId);
     if (typeof window !== 'undefined') {
       localStorage.setItem('touan_active_problem_id', targetId);
     }
 
-    // 該当問題の下書きを取得（なければ空クリア）
     try {
       const { data: draft } = await supabase.from('practice_drafts').select('*').eq('problem_id', targetId).maybeSingle();
       if (draft) {
@@ -679,6 +732,15 @@ export default function PracticePage() {
   };
 
   const currentDrill = SUBJECT_DRILL_GUIDES[currentProblem.subject] || SUBJECT_DRILL_GUIDES['刑法'];
+
+  // ★ 検索の表記揺れ（全角・半角・第・条）を正規化する関数
+  const normalizeQuery = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
+      .replace(/[第条]/g, '')
+      .trim();
+  };
 
   return (
     <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
@@ -1023,10 +1085,10 @@ export default function PracticePage() {
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <input
                     type="text"
-                    placeholder="条文番号または語句 (例: 21, 246, 2条6項, 392, 142)"
+                    placeholder="条文番号または語句 (例: 177, 94, 709, 21, 詐害行為, 取締役)"
                     value={statuteSearchQuery}
                     onChange={(e) => setStatuteSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '6px 10px', fontSize: '12px', border: '1px solid #94a3b8', borderRadius: '6px', outline: 'none' }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {['ALL', '憲法', '行政法', '民法', '商法', '刑法', '刑事訴訟法', '民事訴訟法', '独占禁止法'].map((law) => (
@@ -1035,8 +1097,8 @@ export default function PracticePage() {
                         type="button"
                         onClick={() => setStatuteLawFilter(law)}
                         style={{
-                          padding: '2px 8px',
-                          fontSize: '10px',
+                          padding: '3px 8px',
+                          fontSize: '11px',
                           fontWeight: 'bold',
                           borderRadius: '4px',
                           border: statuteLawFilter === law ? '1px solid #0284c7' : '1px solid #cbd5e1',
@@ -1053,18 +1115,49 @@ export default function PracticePage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(() => {
-                    const combined = [...(currentProblem.statutes || []).map(s => ({ law: s.law || currentProblem.subject, num: s.num || '', title: s.title, text: s.text })), ...MASTER_STATUTES];
-                    const q = statuteSearchQuery.trim().toLowerCase();
+                    const combined = [
+                      ...(currentProblem.statutes || []).map(s => ({
+                        law: s.law || currentProblem.subject,
+                        num: s.num || '',
+                        title: s.title,
+                        text: s.text
+                      })),
+                      ...MASTER_STATUTES
+                    ];
+                    
+                    const qRaw = statuteSearchQuery.trim();
+                    const qNorm = normalizeQuery(qRaw);
+
                     const filtered = combined.filter(item => {
-                      const matchLaw = statuteLawFilter === 'ALL' || item.law.includes(statuteLawFilter);
-                      if (!q) return matchLaw;
-                      return matchLaw && ((item.text || '').toLowerCase().includes(q) || (item.title || '').toLowerCase().includes(q) || (item.num || '').toLowerCase().includes(q));
+                      // 法令フィルター
+                      const matchLaw = statuteLawFilter === 'ALL' || item.law.includes(statuteLawFilter) || (statuteLawFilter === '商法' && item.law === '会社法');
+                      if (!qRaw) return matchLaw;
+
+                      // 表記揺れ（177, １７７, 第177条）に対応した判定
+                      const itemNumNorm = normalizeQuery(item.num || '');
+                      const itemTitleNorm = item.title.toLowerCase();
+                      const itemTextNorm = item.text.toLowerCase();
+
+                      const matchQuery =
+                        itemNumNorm.includes(qNorm) ||
+                        itemTitleNorm.includes(qRaw.toLowerCase()) ||
+                        itemTextNorm.includes(qRaw.toLowerCase());
+
+                      return matchLaw && matchQuery;
                     });
 
+                    if (filtered.length === 0) {
+                      return (
+                        <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>
+                          該当する条文が見つかりませんでした。「177」「94」「21」「共同正犯」など数字やキーワードを変えてお試しください。
+                        </div>
+                      );
+                    }
+
                     return filtered.map((st, idx) => (
-                      <div key={idx} style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px' }}>
+                      <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8' }}>
                             {st.law} {st.num} {st.title}
                           </span>
                           <button
@@ -1073,12 +1166,12 @@ export default function PracticePage() {
                               navigator.clipboard.writeText(`【${st.law} ${st.num} ${st.title}】\n${st.text}\n`);
                               alert(`${st.title} をコピーしました`);
                             }}
-                            style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#ffffff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                            style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                           >
                             📋 引用コピー
                           </button>
                         </div>
-                        <p style={{ margin: 0, fontSize: '11px', lineHeight: '1.6', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>
+                        <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>
                           {st.text}
                         </p>
                       </div>
