@@ -59,6 +59,33 @@ function TantoPracticeContent() {
     }
   }, []);
 
+  // クラウドから進捗のみを再取得する関数（端末間切り替え用）
+  const fetchCloudProgress = useCallback(
+    async (loadedLength: number) => {
+      if (loadedLength === 0) return;
+      const { data: syncData } = await supabase
+        .from('user_sync_progress')
+        .select('*')
+        .eq('sync_key', syncKey)
+        .eq('summary_tag', currentSummaryTag)
+        .maybeSingle();
+
+      if (syncData) {
+        const restoredIndex =
+          typeof syncData.current_index === 'number' &&
+          syncData.current_index >= 0 &&
+          syncData.current_index < loadedLength
+            ? syncData.current_index
+            : 0;
+        setCurrentIndex(restoredIndex);
+        setUserAnswers(syncData.user_answers || {});
+        setStats({ correct: syncData.correct_count || 0, total: syncData.total_count || 0 });
+        setStreak(syncData.streak || 0);
+      }
+    },
+    [syncKey, currentSummaryTag]
+  );
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -67,7 +94,6 @@ function TantoPracticeContent() {
       setStats({ correct: 0, total: 0 });
       setStreak(0);
 
-      // ★ limit(30) を外し、作成日時またはIDで全問（上限100）取得するように変更
       const { data: qData } = await supabase
         .from('tanto_questions')
         .select('*')
@@ -78,42 +104,53 @@ function TantoPracticeContent() {
       const loaded = qData || [];
       setQuestions(loaded);
 
-      // クラウドから中断進捗をロード
       if (loaded.length > 0) {
-        const { data: syncData } = await supabase
-          .from('user_sync_progress')
-          .select('*')
-          .eq('sync_key', syncKey)
-          .eq('summary_tag', currentSummaryTag)
-          .maybeSingle();
-
-        if (syncData) {
-          const restoredIndex = syncData.current_index < loaded.length ? syncData.current_index : 0;
-          setCurrentIndex(restoredIndex);
-          setUserAnswers(syncData.user_answers || {});
-          setStats({ correct: syncData.correct_count || 0, total: syncData.total_count || 0 });
-          setStreak(syncData.streak || 0);
-        }
+        await fetchCloudProgress(loaded.length);
       }
       setLoading(false);
     }
     loadData();
-  }, [currentSummaryTag, syncKey]);
+  }, [currentSummaryTag, syncKey, fetchCloudProgress]);
+
+  // 別端末から戻ってきた時（タブのアクティブ化時）に最新進捗を自動同期
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && questions.length > 0) {
+        fetchCloudProgress(questions.length);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [questions.length, fetchCloudProgress]);
 
   const saveSyncProgress = useCallback(
-    async (newIndex: number, newAnswers: Record<number, boolean>, newCorrect: number, newTotal: number, newStreak: number) => {
+    async (
+      newIndex: number,
+      newAnswers: Record<number, boolean>,
+      newCorrect: number,
+      newTotal: number,
+      newStreak: number
+    ) => {
       setSyncing(true);
       try {
-        await supabase.from('user_sync_progress').upsert({
-          sync_key: syncKey,
-          summary_tag: currentSummaryTag,
-          current_index: newIndex,
-          user_answers: newAnswers,
-          correct_count: newCorrect,
-          total_count: newTotal,
-          streak: newStreak,
-          updated_at: new Date().toISOString(),
-        });
+        const { error } = await supabase.from('user_sync_progress').upsert(
+          {
+            sync_key: syncKey,
+            summary_tag: currentSummaryTag,
+            current_index: newIndex,
+            user_answers: newAnswers,
+            correct_count: newCorrect,
+            total_count: newTotal,
+            streak: newStreak,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'sync_key,summary_tag',
+          }
+        );
+        if (error) {
+          console.error('Supabase保存エラー:', error.message);
+        }
       } catch (err) {
         console.error('同期エラー:', err);
       } finally {
@@ -193,13 +230,13 @@ function TantoPracticeContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 max-w-lg mx-auto select-none">
       <header className="border-b border-slate-800 pb-3 pt-1">
-        {/* トップバー：論証集リンク ＆ ★論文演習（practice）直接リンク */}
+        {/* トップバー：論証集リンク ＆ 論文演習直通ボタン */}
         <div className="flex justify-between items-center mb-2.5 gap-2">
           <Link href="/" className="text-xs text-slate-400 hover:text-slate-200 font-semibold bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg shrink-0">
             ← 論証集
           </Link>
 
-          {/* ★ touan-psi /practice への統合ボタン */}
+          {/* touan-psi /practice への統合ボタン */}
           <a
             href="https://touan-psi.vercel.app/practice"
             target="_blank"
@@ -214,11 +251,15 @@ function TantoPracticeContent() {
 
           <div className="flex items-center gap-1 text-[11px] shrink-0">
             {syncing ? (
-              <span className="text-amber-400 animate-pulse font-mono">同期中...</span>
+              <span className="text-amber-400 animate-pulse font-mono">保存中...</span>
             ) : (
-              <span className="text-emerald-400 font-mono flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>同期中
-              </span>
+              <button
+                onClick={() => fetchCloudProgress(questions.length)}
+                title="タップしてクラウドの最新進捗を手動読込"
+                className="text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-1"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>同期済
+              </button>
             )}
             <button onClick={() => setIsEditingKey(!isEditingKey)} className="text-slate-400 hover:text-slate-200 underline font-mono ml-0.5">
               [{syncKey}]
