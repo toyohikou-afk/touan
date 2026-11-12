@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// キャッシュを無効化するfetchオプション付きでクライアント初期化
+// キャッシュを完全に無効化するfetchオプション付きでクライアント初期化
 const supabase = createClient(supabaseUrl, supabaseKey, {
   global: {
     fetch: (url, options) => {
@@ -17,7 +17,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-// 日程表 Day 1〜7 の定義
 const SUMMARY_OPTIONS = [
   { tag: 'DAY001_CAPACITY', label: 'Day 1: 行為能力・意思能力・詐術' },
   { tag: 'DAY002_FALSE_REPR', label: 'Day 2: 虚偽表示・94条2項類推適用' },
@@ -50,8 +49,7 @@ function TantoPracticeContent() {
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [tempKey, setTempKey] = useState('ufu');
 
-  // 現在選択されているDAYタグ（初期値はnullにし、クラウドの最新DAY確認後に確定）
-  const [activeSummaryTag, setActiveSummaryTag] = useState<string | null>(urlSummaryParam);
+  const [activeSummaryTag, setActiveSummaryTag] = useState<string | null>(null);
 
   const [questions, setQuestions] = useState<TantoQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -63,104 +61,79 @@ function TantoPracticeContent() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorDetail, setErrorDetail] = useState<string>('');
 
-  // 1. ローカル保存のsyncKey復元 & 初回アクセス時の「最後に解いていたDAY」自動特定
+  // クラウドから「最も新しく更新されたDAYとその問題位置」を強制取得するコア関数
+  const forceFetchLatestFromCloud = useCallback(
+    async (currentKey: string, currentTag: string | null, currentQuestionsLen: number) => {
+      setSyncStatus('saving');
+      try {
+        // 1. まず全DAYの中で最も新しく更新されたレコードを取得
+        const { data: latestRecord, error } = await supabase
+          .from('user_sync_progress')
+          .select('*')
+          .eq('sync_key', currentKey)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          setSyncStatus('error');
+          setErrorDetail(error.message);
+          return;
+        }
+
+        if (latestRecord && latestRecord.summary_tag) {
+          // 別のDAYが最新になっている場合は、そのDAYへ強制移動
+          if (latestRecord.summary_tag !== currentTag) {
+            setActiveSummaryTag(latestRecord.summary_tag);
+            router.replace(`/tanto?summary=${latestRecord.summary_tag}`);
+            return;
+          }
+
+          // 同じDAYの場合は、問題番号と回答状況を最新状態に上書き
+          if (currentQuestionsLen > 0) {
+            const restoredIndex =
+              typeof latestRecord.current_index === 'number' &&
+              latestRecord.current_index >= 0 &&
+              latestRecord.current_index < currentQuestionsLen
+                ? latestRecord.current_index
+                : 0;
+            setCurrentIndex(restoredIndex);
+            setUserAnswers(latestRecord.user_answers || {});
+            setStats({
+              correct: latestRecord.correct_count || 0,
+              total: latestRecord.total_count || 0,
+            });
+            setStreak(latestRecord.streak || 0);
+          }
+        } else if (!currentTag) {
+          // レコードがまだ1件もない初回状態
+          const fallbackTag = urlSummaryParam || 'DAY001_CAPACITY';
+          setActiveSummaryTag(fallbackTag);
+        }
+        setSyncStatus('saved');
+      } catch (err: unknown) {
+        setSyncStatus('error');
+        setErrorDetail(err instanceof Error ? err.message : '同期エラー');
+      }
+    },
+    [router, urlSummaryParam]
+  );
+
+  // 初回マウント時：syncKey確定後、URLパラメータよりも「クラウドの最新状態」を優先して開く
   useEffect(() => {
     const savedKey = localStorage.getItem('yobi_tanto_synckey') || 'ufu';
     setSyncKey(savedKey);
     setTempKey(savedKey);
 
-    async function resolveInitialDay() {
-      // URLに明示的な ?summary= 指定がある場合はそれを優先
-      if (urlSummaryParam) {
-        setActiveSummaryTag(urlSummaryParam);
-        return;
-      }
+    forceFetchLatestFromCloud(savedKey, null, 0);
+  }, [forceFetchLatestFromCloud]);
 
-      // URL指定がない場合、クラウドから最も新しく更新されたDAYを取得
-      const { data: latestSync } = await supabase
-        .from('user_sync_progress')
-        .select('summary_tag')
-        .eq('sync_key', savedKey)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (latestSync && latestSync.summary_tag) {
-        setActiveSummaryTag(latestSync.summary_tag);
-        router.replace(`/tanto?summary=${latestSync.summary_tag}`);
-      } else {
-        setActiveSummaryTag('DAY001_CAPACITY');
-      }
-    }
-
-    resolveInitialDay();
-  }, [urlSummaryParam, router]);
-
-  // 2. クラウドから最新進捗（DAYと問題番号の両方）を強制取得する関数
-  const syncFromCloud = useCallback(
-    async (targetTag: string, loadedLength: number, checkLatestDay: boolean = false) => {
-      if (checkLatestDay) {
-        // 他端末で別のDAYに移動していないかも含めて最新レコードを確認
-        const { data: latestAny } = await supabase
-          .from('user_sync_progress')
-          .select('*')
-          .eq('sync_key', syncKey)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (latestAny && latestAny.summary_tag && latestAny.summary_tag !== targetTag) {
-          setActiveSummaryTag(latestAny.summary_tag);
-          router.replace(`/tanto?summary=${latestAny.summary_tag}`);
-          return;
-        }
-      }
-
-      if (loadedLength === 0) return;
-
-      const { data: syncData, error } = await supabase
-        .from('user_sync_progress')
-        .select('*')
-        .eq('sync_key', syncKey)
-        .eq('summary_tag', targetTag)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        setSyncStatus('error');
-        setErrorDetail(error.message);
-        return;
-      }
-
-      if (syncData) {
-        const restoredIndex =
-          typeof syncData.current_index === 'number' &&
-          syncData.current_index >= 0 &&
-          syncData.current_index < loadedLength
-            ? syncData.current_index
-            : 0;
-        setCurrentIndex(restoredIndex);
-        setUserAnswers(syncData.user_answers || {});
-        setStats({ correct: syncData.correct_count || 0, total: syncData.total_count || 0 });
-        setStreak(syncData.streak || 0);
-        setSyncStatus('saved');
-      }
-    },
-    [syncKey, router]
-  );
-
-  // 3. activeSummaryTag が確定したら問題データと進捗をロード
+  // activeSummaryTag が確定したら問題リストと進捗をロード
   useEffect(() => {
     if (!activeSummaryTag) return;
 
-    async function loadData() {
+    async function loadQuestionsAndProgress() {
       setLoading(true);
-      setCurrentIndex(0);
-      setUserAnswers({});
-      setStats({ correct: 0, total: 0 });
-      setStreak(0);
-
       const { data: qData } = await supabase
         .from('tanto_questions')
         .select('*')
@@ -172,29 +145,66 @@ function TantoPracticeContent() {
       setQuestions(loaded);
 
       if (loaded.length > 0 && activeSummaryTag) {
-        await syncFromCloud(activeSummaryTag, loaded.length, false);
+        const { data: syncData } = await supabase
+          .from('user_sync_progress')
+          .select('*')
+          .eq('sync_key', syncKey)
+          .eq('summary_tag', activeSummaryTag)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (syncData) {
+          const restoredIndex =
+            typeof syncData.current_index === 'number' &&
+            syncData.current_index >= 0 &&
+            syncData.current_index < loaded.length
+              ? syncData.current_index
+              : 0;
+          setCurrentIndex(restoredIndex);
+          setUserAnswers(syncData.user_answers || {});
+          setStats({ correct: syncData.correct_count || 0, total: syncData.total_count || 0 });
+          setStreak(syncData.streak || 0);
+        } else {
+          setCurrentIndex(0);
+          setUserAnswers({});
+          setStats({ correct: 0, total: 0 });
+          setStreak(0);
+        }
       }
       setLoading(false);
     }
-    loadData();
-  }, [activeSummaryTag, syncKey, syncFromCloud]);
 
-  // 4. 別端末から戻ってきた時（スリープ解除・タブ復帰時）に最新のDAY＆問題番号へ自動同期
+    loadQuestionsAndProgress();
+  }, [activeSummaryTag, syncKey]);
+
+  // ★ iPhone Safari対策：画面復帰・タブ切替・キャッシュ復元（pageshow）時に強制同期
   useEffect(() => {
-    const handleSyncTrigger = () => {
-      if (document.visibilityState === 'visible' && activeSummaryTag) {
-        syncFromCloud(activeSummaryTag, questions.length, true);
+    const handleWakeUp = () => {
+      if (document.visibilityState === 'visible') {
+        forceFetchLatestFromCloud(syncKey, activeSummaryTag, questions.length);
       }
     };
-    window.addEventListener('focus', handleSyncTrigger);
-    document.addEventListener('visibilitychange', handleSyncTrigger);
-    return () => {
-      window.removeEventListener('focus', handleSyncTrigger);
-      document.removeEventListener('visibilitychange', handleSyncTrigger);
-    };
-  }, [activeSummaryTag, questions.length, syncFromCloud]);
 
-  // 5. クラウドへ現在のDAYと進捗を保存する関数
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // iOS Safariのbfcacheから復元された場合も強制実行
+      if (event.persisted || document.visibilityState === 'visible') {
+        forceFetchLatestFromCloud(syncKey, activeSummaryTag, questions.length);
+      }
+    };
+
+    window.addEventListener('focus', handleWakeUp);
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleWakeUp);
+
+    return () => {
+      window.removeEventListener('focus', handleWakeUp);
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleWakeUp);
+    };
+  }, [syncKey, activeSummaryTag, questions.length, forceFetchLatestFromCloud]);
+
+  // クラウドへ現在のDAYと進捗を保存する関数
   const saveSyncProgress = useCallback(
     async (
       targetTag: string,
@@ -276,13 +286,11 @@ function TantoPracticeContent() {
     }
   };
 
-  // DAY切り替え時も「今このDAYを触っている」ことをクラウドに記録（updated_at更新）
   const handleCategoryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextTag = e.target.value;
     setActiveSummaryTag(nextTag);
-    router.push(`/tanto?summary=${nextTag}`);
+    router.replace(`/tanto?summary=${nextTag}`);
 
-    // 切り替え先の既存レコードがあれば updated_at だけ最新化して「最後に開いたDAY」としてマーク
     const { data: existing } = await supabase
       .from('user_sync_progress')
       .select('*')
@@ -319,7 +327,7 @@ function TantoPracticeContent() {
   if (loading || !activeSummaryTag) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-400 font-mono text-sm">
-        前回の学習DAYと進捗を同期中...
+        最新の学習DAYと進捗を同期中...
       </div>
     );
   }
@@ -329,13 +337,12 @@ function TantoPracticeContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 max-w-lg mx-auto select-none">
       <header className="border-b border-slate-800 pb-3 pt-1">
-        {/* トップバー：論証集リンク ＆ 論文演習直通ボタン */}
+        {/* トップバー */}
         <div className="flex justify-between items-center mb-2.5 gap-2">
           <Link href="/" className="text-xs text-slate-400 hover:text-slate-200 font-semibold bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg shrink-0">
             ← 論証集
           </Link>
 
-          {/* touan-psi /practice への統合ボタン */}
           <a
             href="https://touan-psi.vercel.app/practice"
             target="_blank"
@@ -350,18 +357,17 @@ function TantoPracticeContent() {
 
           <div className="flex items-center gap-1 text-[11px] shrink-0">
             {syncStatus === 'saving' && (
-              <span className="text-amber-400 animate-pulse font-mono">保存中...</span>
+              <span className="text-amber-400 animate-pulse font-mono">同期中...</span>
             )}
             {syncStatus === 'error' && (
               <span title={errorDetail} className="text-rose-400 font-mono font-bold">
-                ⚠保存失敗
+                ⚠失敗
               </span>
             )}
             {(syncStatus === 'saved' || syncStatus === 'idle') && (
               <button
-                onClick={() => syncFromCloud(activeSummaryTag, questions.length, true)}
-                title="タップしてクラウドの最新DAY・進捗を手動読込"
-                className="text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-1 bg-emerald-950/50 border border-emerald-800/60 px-1.5 py-0.5 rounded"
+                onClick={() => forceFetchLatestFromCloud(syncKey, activeSummaryTag, questions.length)}
+                className="text-emerald-400 active:scale-95 font-mono flex items-center gap-1 bg-emerald-950/60 border border-emerald-700 px-2 py-1 rounded"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>同期
               </button>
@@ -372,7 +378,6 @@ function TantoPracticeContent() {
           </div>
         </div>
 
-        {/* エラー詳細がある場合は表示 */}
         {syncStatus === 'error' && errorDetail && (
           <div className="mb-2 rounded bg-rose-950/80 border border-rose-700 px-2.5 py-1.5 text-[11px] text-rose-200">
             同期エラー: {errorDetail}
