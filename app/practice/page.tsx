@@ -352,6 +352,9 @@ const SUBJECT_ORDER = [
 
 export default function PracticePage() {
   const [adminQuery, setAdminQuery] = useState('');
+  const [adminKey, setAdminKey] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [problems, setProblems] = useState<ProblemType[]>(DEFAULT_PROBLEMS);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
@@ -426,8 +429,19 @@ export default function PracticePage() {
       if (savedFs && fontSizes[savedFs]) setFontSize(savedFs);
 
       const params = new URLSearchParams(window.location.search);
-      const admin = params.get('admin');
-      if (admin) setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
+      const admin = params.get('admin') || params.get('ADMIN');
+      if (admin) {
+        setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
+        setAdminKey(admin);
+        // 環境変数 NEXT_PUBLIC_ADMIN_KEY と一致する場合のみ管理者モードを有効化
+        if (admin === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
     }
     initSessionAndSyncLatest();
   }, []);
@@ -612,6 +626,7 @@ export default function PracticePage() {
   };
 
   const handleCreateNewProblem = async () => {
+    if (!isAdmin) return;
     if (!newTitle.trim() || !newFact.trim()) {
       alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
       return;
@@ -650,6 +665,7 @@ export default function PracticePage() {
   };
 
   const handleOpenEditModal = () => {
+    if (!isAdmin) return;
     setEditSubject(currentProblem.subject);
     setEditTitle(currentProblem.target_issue);
     setEditFact(currentProblem.fact_context);
@@ -658,6 +674,7 @@ export default function PracticePage() {
   };
 
   const handleUpdateProblem = async () => {
+    if (!isAdmin) return;
     if (!editTitle.trim() || !editFact.trim()) {
       alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
       return;
@@ -692,6 +709,7 @@ export default function PracticePage() {
   };
 
   const handleDeleteCurrentProblem = async () => {
+    if (!isAdmin) return;
     if (problems.length <= 1) {
       alert('これ以上問題を削除できません。最低1問は保持する必要があります。');
       return;
@@ -737,6 +755,11 @@ export default function PracticePage() {
   };
 
   const handleSubmitEvaluation = async () => {
+    if (!isAdmin) {
+      alert('採点権限がありません。管理者URLからアクセスしてください。');
+      return;
+    }
+
     if (!userDraft.trim()) {
       alert('答案本文が空です。起案を入力してください。');
       return;
@@ -754,7 +777,10 @@ export default function PracticePage() {
     try {
       const res = await fetch('/api/evaluate-draft', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
+        },
         body: JSON.stringify({
           userDraft,
           drillNotes,
@@ -989,62 +1015,65 @@ export default function PracticePage() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
-                style={{
-                  padding: '4px 10px',
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  fontWeight: '900',
-                  borderRadius: '6px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
-                }}
-                title="新しい演習問題を追加"
-              >
-                ＋ 新規問題
-              </button>
+            {/* 管理者のみ表示：追加・編集・削除ボタン */}
+            {isAdmin && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  style={{
+                    padding: '4px 10px',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
+                  }}
+                  title="新しい演習問題を追加"
+                >
+                  ＋ 新規問題
+                </button>
 
-              <button
-                type="button"
-                onClick={handleOpenEditModal}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  color: '#1d4ed8',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-                title="現在選択中の問題を編集"
-              >
-                ✏️ 編集
-              </button>
+                <button
+                  type="button"
+                  onClick={handleOpenEditModal}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                  title="現在選択中の問題を編集"
+                >
+                  ✏️ 編集
+                </button>
 
-              <button
-                type="button"
-                onClick={handleDeleteCurrentProblem}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#fff1f2',
-                  border: '1px solid #fecdd3',
-                  color: '#be123c',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-                title="現在選択中の問題を削除"
-              >
-                🗑️ 削除
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentProblem}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#fff1f2',
+                    border: '1px solid #fecdd3',
+                    color: '#be123c',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                  title="現在選択中の問題を削除"
+                >
+                  🗑️ 削除
+                </button>
+              </div>
+            )}
           </div>
 
           <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
@@ -1293,23 +1322,26 @@ export default function PracticePage() {
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleSubmitEvaluation}
-              disabled={isEvaluating}
-              style={{
-                backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
-                color: '#ffffff',
-                padding: '4px 12px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                border: 'none',
-                cursor: isEvaluating ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
-            </button>
+            {/* 管理者のみ表示：AI厳格採点ボタン */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleSubmitEvaluation}
+                disabled={isEvaluating}
+                style={{
+                  backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
+                  color: '#ffffff',
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: isEvaluating ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
+              </button>
+            )}
           </div>
 
           <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex', overflow: 'hidden' }}>
@@ -1367,7 +1399,7 @@ export default function PracticePage() {
       </div>
 
       {/* 新規問題追加モーダル */}
-      {isAddModalOpen && (
+      {isAdmin && isAddModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
@@ -1453,7 +1485,7 @@ export default function PracticePage() {
       )}
 
       {/* 問題編集モーダル */}
-      {isEditModalOpen && (
+      {isAdmin && isEditModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
