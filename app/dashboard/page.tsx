@@ -11,6 +11,11 @@ type SubmissionItem = {
   time_spent_seconds: number;
   ai_feedback: string;
   created_at: string;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  thoughts_tokens?: number | null;
+  cost_usd?: number | null;
+  cost_jpy?: number | null;
 };
 
 type ProblemInfo = {
@@ -112,6 +117,42 @@ export default function DashboardPage() {
       alert(`削除に失敗しました: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
+
+  // 累計コスト・トークン数の集計（全履歴ベース）
+  const costStats = useMemo(() => {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let totalJpy = 0;
+    let monthlyJpy = 0;
+    let totalTokens = 0;
+    let billedCount = 0;
+
+    for (const row of submissions) {
+      const jpy = Number(row.cost_jpy ?? 0);
+      if (jpy > 0) billedCount += 1;
+
+      totalJpy += jpy;
+      totalTokens +=
+        (row.input_tokens ?? 0) +
+        (row.output_tokens ?? 0) +
+        (row.thoughts_tokens ?? 0);
+
+      if (row.created_at && new Date(row.created_at) >= firstDayOfMonth) {
+        monthlyJpy += jpy;
+      }
+    }
+
+    const avgJpy = billedCount > 0 ? totalJpy / billedCount : 0;
+
+    return {
+      totalJpy,
+      monthlyJpy,
+      totalTokens,
+      billedCount,
+      avgJpy,
+    };
+  }, [submissions]);
 
   const filteredSubmissions = useMemo(() => {
     if (selectedSubjectFilter === 'ALL') return submissions;
@@ -239,6 +280,34 @@ export default function DashboardPage() {
       <main style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
         <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           
+          {/* API採点コスト累計サマリーカード */}
+          {!isLoading && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 14px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>💴 今月の採点コスト</div>
+                <div style={{ marginTop: '4px', fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
+                  約 {costStats.monthlyJpy.toFixed(1)} <span style={{ fontSize: '12px', fontWeight: 'bold' }}>円</span>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 14px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                  📊 通算コスト（平均 {costStats.avgJpy.toFixed(1)} 円/回）
+                </div>
+                <div style={{ marginTop: '4px', fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
+                  約 {costStats.totalJpy.toFixed(1)} <span style={{ fontSize: '12px', fontWeight: 'bold' }}>円</span>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 14px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>🔢 累計消費トークン数</div>
+                <div style={{ marginTop: '4px', fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
+                  {costStats.totalTokens.toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 'normal', color: '#64748b' }}>tokens</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
               ⏳ 答案履歴を読み込み中...
@@ -257,6 +326,11 @@ export default function DashboardPage() {
               const subjectDisplay = prob?.subject || '刑法';
               const issueDisplay = prob?.target_issue || item.problem_id;
               const isExpanded = expandedId === item.id;
+              const itemCostJpy = Number(item.cost_jpy ?? 0);
+              const itemTotalTokens =
+                (item.input_tokens ?? 0) +
+                (item.output_tokens ?? 0) +
+                (item.thoughts_tokens ?? 0);
 
               return (
                 <div
@@ -306,14 +380,19 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* 起案スペック */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>
+                  {/* 起案スペック ＆ 採点コスト */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>
                     <div>
                       起案時間: <strong style={{ color: '#0f172a' }}>{formatTime(item.time_spent_seconds || 0)}</strong>
                     </div>
                     <div>
                       文字数: <strong style={{ color: '#0f172a' }}>{item.user_draft?.length || 0}</strong> 字（約 {((item.user_draft?.length || 0) / 690).toFixed(1)} 頁）
                     </div>
+                    {itemCostJpy > 0 && (
+                      <div style={{ padding: '1px 8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', color: '#334155' }}>
+                        💴 採点コスト: <strong style={{ color: '#0f172a' }}>約 {itemCostJpy.toFixed(2)} 円</strong>（{itemTotalTokens.toLocaleString()} tokens / 思考: {(item.thoughts_tokens ?? 0).toLocaleString()}）
+                      </div>
+                    )}
                   </div>
 
                   {/* 答案本文（文字サイズ連動） */}
