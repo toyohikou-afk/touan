@@ -11,6 +11,15 @@ type DrillGuideItem = {
   template: string;
 };
 
+type GradingCostSummary = {
+  inputTokens: number;
+  outputTokens: number;
+  thoughtsTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  costJpy: number;
+};
+
 const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
   '刑法': {
     title: '刑法：主犯先行・法的三段論法・共犯論の射程',
@@ -383,6 +392,7 @@ export default function PracticePage() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [latestCost, setLatestCost] = useState<GradingCostSummary | null>(null);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'offline'>('synced');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
@@ -567,6 +577,7 @@ export default function PracticePage() {
     }
     setIsTimerRunning(false);
     setAiFeedback(null);
+    setLatestCost(null);
     setSaveSuccessMsg(null);
   };
 
@@ -771,6 +782,7 @@ export default function PracticePage() {
 
     setIsEvaluating(true);
     setAiFeedback(null);
+    setLatestCost(null);
     setSaveSuccessMsg(null);
     const timeSpent = 70 * 60 - secondsLeft;
 
@@ -795,7 +807,9 @@ export default function PracticePage() {
       if (!res.ok) throw new Error(data.error || '採点リクエストに失敗しました');
 
       const feedback = data.feedback || '講評を受信できませんでした。';
+      const cost: GradingCostSummary | null = data.cost ?? null;
       setAiFeedback(feedback);
+      setLatestCost(cost);
 
       const { error: insertError } = await supabase.from('submissions').insert([
         {
@@ -803,6 +817,11 @@ export default function PracticePage() {
           user_draft: userDraft,
           time_spent_seconds: timeSpent,
           ai_feedback: feedback,
+          input_tokens: cost?.inputTokens ?? 0,
+          output_tokens: cost?.outputTokens ?? 0,
+          thoughts_tokens: cost?.thoughtsTokens ?? 0,
+          cost_usd: cost?.costUsd ?? 0,
+          cost_jpy: cost?.costJpy ?? 0,
         },
       ]);
 
@@ -1384,8 +1403,19 @@ export default function PracticePage() {
               </div>
 
               {saveSuccessMsg && (
-                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
                   {saveSuccessMsg}
+                </div>
+              )}
+
+              {latestCost && (
+                <div style={{ padding: '6px 12px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155', fontSize: '11px', marginBottom: '10px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                    💴 今回の採点コスト: 約 {latestCost.costJpy.toFixed(2)} 円（${latestCost.costUsd.toFixed(4)}）
+                  </span>
+                  <span>
+                    入力: {latestCost.inputTokens.toLocaleString()} / 出力: {latestCost.outputTokens.toLocaleString()} / 思考: {latestCost.thoughtsTokens.toLocaleString()} tokens
+                  </span>
                 </div>
               )}
 
