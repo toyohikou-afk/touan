@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { supabase } from './lib/supabase';
 
 // === 文字サイズの状態定義 ===
@@ -378,7 +379,6 @@ export default function Home() {
     }
   };
 
-  // 【API経由に変更】問題の削除
   const handleDeleteQuestion = async (id: number) => {
     if (!isAdmin) return;
     if (!confirm('本当にこの問題を削除しますか？')) return;
@@ -409,7 +409,6 @@ export default function Home() {
     }
   };
 
-  // 【API経由に変更】問題・解説の更新
   const handleUpdateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin || !editingQuestion) return;
@@ -640,19 +639,41 @@ export default function Home() {
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={() => setActiveTab('tantou')}
-            style={{ padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', background: activeTab === 'tantou' ? '#4a69bd' : '#fff', color: activeTab === 'tantou' ? '#fff' : '#4a69bd', border: '1px solid #4a69bd' }}
+            style={{ padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', background: activeTab === 'tantou' ? '#4a69bd' : '#fff', color: activeTab === 'tantou' ? '#fff' : '#4a69bd', border: '1px solid #4a69bd', fontSize: '13px' }}
           >
             短答過去問 (yobi_db)
           </button>
           <button
             onClick={() => setActiveTab('ronsho')}
-            style={{ padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', background: activeTab === 'ronsho' ? '#4a69bd' : '#fff', color: activeTab === 'ronsho' ? '#fff' : '#4a69bd', border: '1px solid #4a69bd' }}
+            style={{ padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', background: activeTab === 'ronsho' ? '#4a69bd' : '#fff', color: activeTab === 'ronsho' ? '#fff' : '#4a69bd', border: '1px solid #4a69bd', fontSize: '13px' }}
           >
             論文・論証カード (anki)
           </button>
+          
+          {/* 短答肢別速攻演習へのリンク */}
+          <Link
+            href="/tanto"
+            style={{
+              padding: '8px 14px',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#ffffff',
+              border: 'none',
+              fontSize: '13px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <span>📝 短答肢別演習 (30問)</span>
+            <span style={{ fontSize: '10px', background: '#064e3b', color: '#a7f3d0', padding: '1px 5px', borderRadius: '10px' }}>New</span>
+          </Link>
         </div>
       </div>
 
