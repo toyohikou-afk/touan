@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { calculateGeminiCost, type GeminiUsageMetadata } from '@/lib/geminiCost';
+
+export const maxDuration = 60;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -56,10 +59,11 @@ ${userDraft}
 - 答案作成に直結する修正指示を1〜2点
 `;
 
-    // 優先モデルと混雑時のフォールバック先モデル
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
+    // 優先モデル（gemini-3.1-pro-preview）と混雑時のフォールバック先モデル（gemini-2.5-pro）
+    const candidateModels = ['gemini-3.1-pro-preview', 'gemini-2.5-pro'];
     let lastError: unknown = null;
     let feedbackText = '';
+    let usageMetadata: GeminiUsageMetadata | undefined;
 
     // モデル順に最大2回ずつリトライ（503スパイク耐性）
     for (const model of candidateModels) {
@@ -71,6 +75,7 @@ ${userDraft}
           });
           if (response && response.text) {
             feedbackText = response.text;
+            usageMetadata = response.usageMetadata;
             break;
           }
         } catch (err: unknown) {
@@ -89,7 +94,12 @@ ${userDraft}
       throw lastError || new Error('モデルから応答を受信できませんでした');
     }
 
-    return NextResponse.json({ feedback: feedbackText });
+    const cost = calculateGeminiCost(usageMetadata);
+
+    return NextResponse.json({
+      feedback: feedbackText,
+      cost,
+    });
   } catch (error: unknown) {
     console.error('AI採点エラー:', error);
     const message = error instanceof Error ? error.message : '採点処理中にエラーが発生しました';
