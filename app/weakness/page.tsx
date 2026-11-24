@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
-// === app/practice/page.tsx と完全共通の文字サイズ定義 ===
 type FontSizeLevel = 'sm' | 'base' | 'lg' | 'xl';
 
 const fontSizes: Record<FontSizeLevel, { title: string; text: string; sub: string; lh: string; label: string }> = {
@@ -18,6 +17,28 @@ const SUBJECT_ORDER = [
   '憲法', '行政法', '民法', '商法', '民事訴訟法', '刑法', '刑事訴訟法',
   '民事実務', '刑事実務', '租税法', '経済法'
 ];
+
+const practiceLinkStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  backgroundColor: '#eff6ff',
+  border: '1px solid #bfdbfe',
+  borderRadius: '6px',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  color: '#1d4ed8',
+  textDecoration: 'none',
+};
+
+const dashboardLinkStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  backgroundColor: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '6px',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  color: '#334155',
+  textDecoration: 'none',
+};
 
 type Weakness = {
   id: string;
@@ -42,12 +63,10 @@ export default function WeaknessReviewPage() {
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // JSONインポート用ステート
   const [jsonInput, setJsonInput] = useState<string>('');
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
 
-  // practiceページと共通の localStorage キー（touan_font_size）＆ adminクエリを引き継ぎ
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedFs = localStorage.getItem('touan_font_size') as FontSizeLevel;
@@ -70,7 +89,6 @@ export default function WeaknessReviewPage() {
     }
   };
 
-  // 弱点データの取得（定着度が低い順・復習期限が来ている順）
   const fetchWeaknesses = useCallback(async () => {
     setLoading(true);
     let query = supabase
@@ -96,7 +114,6 @@ export default function WeaknessReviewPage() {
     fetchWeaknesses();
   }, [fetchWeaknesses]);
 
-  // 復習結果（✕・△・◯）の記録と次回復習日の更新
   const handleRate = async (newLevel: 1 | 2 | 3) => {
     const current = items[currentIndex];
     if (!current) return;
@@ -125,7 +142,6 @@ export default function WeaknessReviewPage() {
     }
   };
 
-  // 弱点カードの削除
   const handleDeleteItem = async (id: string) => {
     if (!confirm('この弱点カードをデータベースから削除しますか？')) return;
     const { error } = await supabase.from('weaknesses').delete().eq('id', id);
@@ -139,7 +155,6 @@ export default function WeaknessReviewPage() {
     }
   };
 
-  // AI先生が出力したJSONの一括登録処理
   const handleImportJson = async () => {
     setImportStatus(null);
     setIsImporting(true);
@@ -187,7 +202,6 @@ export default function WeaknessReviewPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif' }}>
       
-      {/* practiceページと完全統一したヘッダー */}
       <header style={{ minHeight: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '8px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexWrap: 'wrap', gap: '8px', position: 'sticky', top: 0, zIndex: 20 }}>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -199,7 +213,6 @@ export default function WeaknessReviewPage() {
             登録: {items.length}件
           </span>
 
-          {/* タブ切り替え */}
           <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
             <button
               type="button"
@@ -237,7 +250,6 @@ export default function WeaknessReviewPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* practiceページと完全同一の文字拡大ボタン（小・標準・大・特大） */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
@@ -261,24 +273,21 @@ export default function WeaknessReviewPage() {
             ))}
           </div>
 
-          <Link #bfdbfe', '#1d4ed8', '#eff6ff', '11px', '1px '4px '6px', 'bold', 'none', 10px', backgroundColor: border: borderRadius: color: fontSize: fontWeight: href="{`/practice${adminQuery}`}" padding: solid style="{{" textDecoration: }}>
+          <Link href="{`/practice${adminQuery}`}" style="{practiceLinkStyle}">
             ⚖️ 論文起案へ戻る
           </Link>
 
-          <Link #cbd5e1', '#334155', '#f8fafc', '11px', '1px '4px '6px', 'bold', 'none', 10px', backgroundColor: border: borderRadius: color: fontSize: fontWeight: href="{`/dashboard${adminQuery}`}" padding: solid style="{{" textDecoration: }}>
+          <Link href="{`/dashboard${adminQuery}`}" style="{dashboardLinkStyle}">
             📊 答案履歴
           </Link>
         </div>
       </header>
 
-      {/* メインコンテンツエリア */}
       <main style={{ flex: 1, maxWidth: '820px', width: '100%', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
         
-        {/* ================= 1. スマホ復習カードモード ================= */}
         {activeTab === 'review' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             
-            {/* 科目フィルター＆ページ送りバー */}
             <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
@@ -387,7 +396,6 @@ export default function WeaknessReviewPage() {
                 </button>
               </div>
             ) : (
-              /* 弱点カード本体 */
               <div style={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #cbd5e1',
@@ -396,7 +404,6 @@ export default function WeaknessReviewPage() {
                 padding: '20px',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
               }}>
-                {/* カード上部バッジ */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '12px', fontWeight: 'bold', padding: '2px 10px', borderRadius: '6px' }}>
@@ -424,7 +431,6 @@ export default function WeaknessReviewPage() {
                   </button>
                 </div>
 
-                {/* 論点タイトル */}
                 <div style={{ marginBottom: '18px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', marginBottom: '4px' }}>【論点】</div>
                   <h2 style={{ fontSize: currentFs.title, fontWeight: '900', color: '#0f172a', margin: 0, lineHeight: '1.5' }}>
@@ -458,7 +464,6 @@ export default function WeaknessReviewPage() {
                   </div>
                 ) : (
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {/* ① 保護法益・制度趣旨 */}
                     <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderLeft: '4px solid #16a34a', borderRadius: '8px', padding: '14px' }}>
                       <strong style={{ display: 'block', fontSize: currentFs.sub, color: '#15803d', marginBottom: '6px' }}>
                         ① 保護法益・制度趣旨（根っこ）
@@ -468,7 +473,6 @@ export default function WeaknessReviewPage() {
                       </div>
                     </div>
 
-                    {/* ② 判例の規範定立 */}
                     <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderLeft: '4px solid #2563eb', borderRadius: '8px', padding: '14px' }}>
                       <strong style={{ display: 'block', fontSize: currentFs.sub, color: '#1e40af', marginBottom: '6px' }}>
                         ② 判例の規範定立（答案フレーズ）
@@ -478,7 +482,6 @@ export default function WeaknessReviewPage() {
                       </div>
                     </div>
 
-                    {/* ③ 当てはめの急所・実務視点 */}
                     <div style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderLeft: '4px solid #e11d48', borderRadius: '8px', padding: '14px' }}>
                       <strong style={{ display: 'block', fontSize: currentFs.sub, color: '#9f1239', marginBottom: '6px' }}>
                         ③ 当てはめの急所・実務視点・弱点メモ
@@ -488,7 +491,6 @@ export default function WeaknessReviewPage() {
                       </div>
                     </div>
 
-                    {/* 定着度評価ボタン */}
                     <div style={{ marginTop: '6px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
                       <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '10px' }}>
                         今の想起レベルを記録して次のカードへ
@@ -527,7 +529,6 @@ export default function WeaknessReviewPage() {
           </div>
         )}
 
-        {/* ================= 2. JSON一括登録モード ================= */}
         {activeTab === 'import' && (
           <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
             <h3 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '16px', fontWeight: '900' }}>
