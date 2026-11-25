@@ -273,11 +273,11 @@ export default function WeaknessReviewPage() {
             ))}
           </div>
 
-          <Link href="{`/practice${adminQuery}`}" style="{practiceLinkStyle}">
+          <Link href={`/practice${adminQuery}`} style={practiceLinkStyle}>
             ⚖️ 論文起案へ戻る
           </Link>
 
-          <Link href="{`/dashboard${adminQuery}`}" style="{dashboardLinkStyle}">
+          <Link href={`/dashboard${adminQuery}`} style={dashboardLinkStyle}>
             📊 答案履歴
           </Link>
         </div>
