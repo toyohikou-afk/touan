@@ -200,9 +200,7 @@ const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
   }
 };
 
-// ★ 主要頻出法令マスター（即座に表示可能な基本条文＋無権代理・108条網羅）
 const MASTER_STATUTES = [
-  // 憲法
   { law: '憲法', num: '第13条', title: '個人の尊重・幸福追求権', text: 'すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。' },
   { law: '憲法', num: '第14条第1項', title: '法の下の平等', text: 'すべて国民は、法の下に平等であつて、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。' },
   { law: '憲法', num: '第15条', title: '公務員の選定罷免権及び性質・普通選挙の保障', text: '1 公務員を選定し、及びこれを罷免することは、国民固有の権利である。\n2 すべて公務員は、全体の奉仕者であつて、一部の奉仕者ではない。\n3 公務員の選挙については、成年者による普通選挙を保障する。\n4 すべて選挙における投票の秘密は、これを侵してはならない。選挙人は、その選択に関し公的にも私的にも責任を問はれない。' },
@@ -211,7 +209,6 @@ const MASTER_STATUTES = [
   { law: '憲法', num: '第29条', title: '財産権', text: '1 財産権は、これを侵してはならない。\n2 財産権の内容は、公共の福祉に適合するやうに、法律でこれを定める。\n3 私有財産は、正当な補償の下に、これを公共のために用ひることができる。' },
   { law: '憲法', num: '第31条', title: '適正手続の保障', text: '何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。' },
 
-  // 民法（総則・意思表示・代理・無権代理・時効）
   { law: '民法', num: '第3条の2', title: '意思能力', text: '法律行為の当事者が意思表示をした時に意思能力を有しなかったときは、その法律行為は、無効とする。' },
   { law: '民法', num: '第5条', title: '未成年者の法律行為', text: '1 未成年者が法律行為をするには、その法定代理人の同意を得なければならない。ただし、単に権利を得、又は義務を免れる法律行為については、この限りでない。\n2 前項の規定に反する法律行為は、取り消すことができる。' },
   { law: '民法', num: '第15条', title: '保佐開始の審判', text: '1 精神上の障害により事理を弁識する能力が著しく不十分である者については、家庭裁判所は、本人、配偶者、四親等内の親族、後見人、後見監督人、補助人、補助監督人又は検察官の請求により、保佐開始の審判をすることができる。\n2 本人以外の者の請求により保佐開始の審判をするには、本人の同意がなければならない。' },
@@ -231,7 +228,6 @@ const MASTER_STATUTES = [
   { law: '民法', num: '第117条', title: '無権代理人の責任', text: '1 他人の代理人として契約をした者は、自己の代理権を証明したとき、又は本人の追認を得たときを除き、相手方の選択に従い、相手方に対して履行又は損害賠償の責任を負う。\n2 前項の規定は、次に掲げる場合には、適用しない。\n一 他人の代理人として契約をした者が代理権を有しないことを相手方が知っていたとき。\n二 他人の代理人として契約をした者が代理権を有しないことを相手方が過失によって知らなかったとき。ただし、他人の代理人として契約をした者が自己に代理権がないことを知っていたときは、この限りでない。\n三 他人の代理人として契約をした者が行為能力の制限を受けていたとき。' },
   { law: '民法', num: '第162条', title: '所有権の取得時効', text: '1 二十年間、所有の意思をもって、平穏に、かつ、公然と他人の物を占有した者は、その所有権を取得する。\n2 十年間、所有の意思をもって、平穏に、かつ、公然と他人の物を占有した者は、その占有の開始の時に、善意であり、かつ、過失がなかったときは、その所有権を取得する。' },
 
-  // 民法（物権・担保物権）
   { law: '民法', num: '第177条', title: '不動産に関する物権の変動の対抗要件', text: '不動産に関する物権の得喪及び変更は、不動産登記法その他の登記に関する法律の定めるところに従いその登記をしなければ、第三者に対抗することができない。' },
   { law: '民法', num: '第178条', title: '動産に関する物権の譲渡の対抗要件', text: '動産に関する物権の譲渡は、その動産の引渡しがなければ、第三者に対抗することができない。' },
   { law: '民法', num: '第192条', title: '即時取得', text: '取引行為によって、平穏に、かつ、公然と動産の占有を始めた者は、善意であり、かつ、過失がないときは、即時にその動産について行使する権利を取得する。' },
@@ -241,7 +237,6 @@ const MASTER_STATUTES = [
   { law: '民法', num: '第372条', title: '留置権等の規定の準用（抵当権の物上代位）', text: '第二百九十六条、第三百四条及び第三百五十一条の規定は、抵当権について準用する。' },
   { law: '民法', num: '第388条', title: '法定地上権', text: '土地及びその上に存する建物が同一の所有者に属する場合において、その土地又は建物につき抵当権が設定され、その実行により所有者を異にするに至ったときは、その建物について、地上権が設定されたものとみなす。この場合において、地代は、当事者の請求により、裁判所が定める。' },
 
-  // 民法（債権・契約・不法行為）
   { law: '民法', num: '第415条', title: '債務不履行による損害賠償', text: '1 債務者がその債務の本旨に従った履行をしないとき又は債務の履行が不能であるときは、債権者は、これによって生じた損害の賠償を請求することができる。ただし、その債務の不履行が契約その他の債務の発生原因及び取引上の社会通念に照らして債務者の責めに帰することができない事由によるものであるときは、この限りでない。' },
   { law: '民法', num: '第423条', title: '債権者代位権の要件', text: '1 債権者は、自己の債権を保全するため必要があるときは、債務者に属する権利を行使することができる。ただし、債務者の一身に専属する権利及び差押えを禁ぜられた権利は、この限りでない。' },
   { law: '民法', num: '第424条', title: '詐害行為取消請求', text: '1 債権者は、債務者が債権者を害することを知ってした行為の取消しを裁判所に請求することができる。ただし、その行為によって利益を受けた者がその行為の時において債権者を害することを知らなかったときは、この限りでない。' },
@@ -257,7 +252,6 @@ const MASTER_STATUTES = [
   { law: '民法', num: '第709条', title: '不法行為による損害賠償', text: '故意又は過失によって他人の権利又は法律上保護される利益を侵害した者は、これによって生じた損害を賠償する責任を負う。' },
   { law: '民法', num: '第715条', title: '使用者等の責任', text: '1 ある事業のために他人を使用する者は、被用者がその事業の執行について第三者に加えた損害を賠償する責任を負う。ただし、使用者が被用者の選任及びその事業の監督について相当の注意をしたとき、又は相当の注意をしても損害が生ずべきであったときは、この限りでない。' },
 
-  // 刑法
   { law: '刑法', num: '第36条', title: '正当防衛', text: '1 急迫不正の侵害に対して、自己又は他人の権利を防衛するため、やむを得ずにした行為は、罰しない。\n2 防衛の程度を超えた行為は、情状により、その刑を減軽し、又は免除することができる。' },
   { law: '刑法', num: '第38条', title: '故意', text: '1 罪を犯す意思がない行為は、罰しない。ただし、法律に特別の規定がある場合は、この限りでない。' },
   { law: '刑法', num: '第60条', title: '共同正犯', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
@@ -271,7 +265,6 @@ const MASTER_STATUTES = [
   { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。\n2 前項の方法により、財産上不法の利益を得、又は他人にこれを得させた者も、同項と同様とする。' },
   { law: '刑法', num: '第252条', title: '横領', text: '1 自己の占有する他人の物を横領した者は、五年以下の懲役に処する。' },
 
-  // 商法・会社法
   { law: '会社法', num: '第199条', title: '募集株式の募集事項の決定', text: '1 株式会社は、その発行する株式を引き受ける者の募集をしようとするときは、その都度、募集株式について次に掲げる事項を定めなければならない。' },
   { law: '会社法', num: '第356条', title: '競業及び利益相反取引の制限', text: '1 取締役は、次に掲げる場合には、株主総会（取締役会設置会社にあっては、取締役会）において、当該取引につき重要な事実を開示し、その承認を受けなければならない。\n一 取締役が自己又は第三者のために株式会社の事業の部類に属する取引をしようとするとき。\n二 取締役が自己又は第三者のために株式会社と取引をしようとするとき。' },
   { law: '会社法', num: '第361条', title: '取締役の報酬等', text: '1 取締役の報酬、賞与その他の職務執行の対価として株式会社から受ける財産上の利益についての次に掲げる事項は、定款に当該事項を定めていないときは、株主総会の決議によって定める。' },
@@ -280,24 +273,20 @@ const MASTER_STATUTES = [
   { law: '会社法', num: '第429条', title: '役員等の第三者に対する損害賠償責任', text: '1 役員等がその職務を行うについて悪意又は重大な過失があったときは、当該役員等は、これによって第三者に生じた損害を賠償する責任を負う。' },
   { law: '会社法', num: '第828条', title: '会社の組織に関する行為の無効の訴え', text: '1 次の各号に掲げる行為の無効は、当該各号に定める期間内に、訴えをもってのみ主張することができる。\n一 株式会社の設立 成立の日から二年以内\n二 新株発行 効力発生日から六箇月以内（非公開会社は一年以内）' },
 
-  // 民事訴訟法
   { law: '民事訴訟法', num: '第114条', title: '既判力の範囲', text: '1 確定判決は、主文に包含するものに限り、既判力を有する。\n2 相殺のために主張した請求の成立又は不成立の判断は、相殺をもって対抗した額について既判力を有する。' },
   { law: '民事訴訟法', num: '第142条', title: '二重起訴の禁止', text: '裁判所に係属する事件については、当事者は、更に訴えを提起することができない。' },
   { law: '民事訴訟法', num: '第220条', title: '文書提出義務', text: '次に掲げる場合において、所持者は、その提出を拒むことができない。\n四 専ら文書の所持者の利用に供するための文書（自己利用文書）に該当しないとき。' },
   { law: '民事訴訟法', num: '第228条第4項', title: '私文書の成立の真正の推定', text: '私文書は、本人又はその代理人の署名又は押印があるときは、真正に成立したものと推定する。' },
 
-  // 刑事訴訟法
   { law: '刑事訴訟法', num: '第197条第1項', title: '捜査の基本原則', text: '捜査については、その目的を達するため必要な取調をすることができる。但し、強制の処分は、この法律に特別の定のある場合でなければ、これをすることができない。' },
   { law: '刑事訴訟法', num: '第218条第1項', title: '令状による捜索・差押え・検証', text: '検察官、検察事務官又は司法警察職員は、犯罪の捜査をするについて必要があるときは、裁判官の発する令状により、差押、捜索又は検証をすることができる。' },
   { law: '刑事訴訟法', num: '第312条第1項', title: '訴因の変更', text: '裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、訴因又は罰条の追加、撤回又は変更を許さなければならない。' },
   { law: '刑事訴訟法', num: '第320条第1項', title: '伝聞証拠の禁止', text: '第三百二十一条乃至第三百二十八条に規定する場合を除いては、公判期日における供述に代へて書面を証拠とし、又は公判期日外における他の者の供述を内容とする供述を証拠とすることはできない。' },
 
-  // 行政法
   { law: '行政事件訴訟法', num: '第3条第2項', title: '処分の取消しの訴え', text: 'この法律において「処分の取消しの訴え」とは、行政庁の処分その他公権力の行使に当たる行為の取消しを求める訴訟をいう。' },
   { law: '行政事件訴訟法', num: '第9条', title: '原告適格', text: '1 処分の取消しの訴え及び裁決の取消しの訴えは、当該処分又は裁決の取消しを求めるにつき法律上の利益を有する者に限り、提起することができる。\n2 裁判所は、処分又は裁決の相手方以外の者が法律上の利益を有するかどうかを判断するに当たっては、当該処分又は裁決の根拠となる法令の規定の趣旨及び目的等を参酌しなければならない。' },
   { law: '行政事件訴訟法', num: '第30条', title: '裁量処分の取消し', text: '行政庁の裁量処分については、裁量権の範囲をこえ又はその濫用があった場合に限り、裁判所は、その処分を取り消すことができる。' },
 
-  // 経済法
   { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' },
   { law: '独占禁止法', num: '第3条', title: '私的独占及び不当な取引制限の禁止', text: '事業者は、私的独占又は不当な取引制限をしてはならない。' }
 ];
@@ -359,6 +348,28 @@ const SUBJECT_ORDER = [
   '民事実務', '刑事実務', '租税法', '経済法'
 ];
 
+const dashboardNavStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  backgroundColor: '#eff6ff',
+  border: '1px solid #bfdbfe',
+  borderRadius: '6px',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  color: '#1d4ed8',
+  textDecoration: 'none',
+};
+
+const weaknessNavStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  backgroundColor: '#f0fdf4',
+  border: '1px solid #bbf7d0',
+  borderRadius: '6px',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  color: '#15803d',
+  textDecoration: 'none',
+};
+
 export default function PracticePage() {
   const [adminQuery, setAdminQuery] = useState('');
   const [adminKey, setAdminKey] = useState('');
@@ -368,7 +379,6 @@ export default function PracticePage() {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedProblemId, setSelectedProblemId] = useState<string>(DEFAULT_PROBLEMS[0].id);
 
-  // モーダル
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('刑法');
   const [newTitle, setNewTitle] = useState('');
@@ -443,7 +453,6 @@ export default function PracticePage() {
       if (admin) {
         setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
         setAdminKey(admin);
-        // 環境変数 NEXT_PUBLIC_ADMIN_KEY と一致する場合のみ管理者モードを有効化
         if (admin === process.env.NEXT_PUBLIC_ADMIN_KEY) {
           setIsAdmin(true);
         } else {
@@ -456,7 +465,6 @@ export default function PracticePage() {
     initSessionAndSyncLatest();
   }, []);
 
-  // 電子六法：e-Gov / Supabase 全条文リアルタイム検索（デバウンス350ms）
   useEffect(() => {
     if (activeTab !== 'statute') return;
 
@@ -958,578 +966,6 @@ export default function PracticePage() {
             </button>
           </div>
 
-          <Link
-            href={`/dashboard${adminQuery}`}
-            style={{
-              padding: '4px 10px',
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              color: '#1d4ed8',
-              textDecoration: 'none',
-            }}
-          >
-            📊 答案履歴
-          </Link>
-
-          <Link
-            href={`/weakness${adminQuery}`}
-            style={{
-              padding: '4px 10px',
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              color: '#15803d',
-              textDecoration: 'none',
-            }}
-          >
-            🎯 弱点DB
-          </Link>
-        </div>
-      </header>
-
-      {/* 2ペインメイン作業エリア */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 104px)', overflow: 'hidden' }}>
-        
-        {/* 左ペイン */}
-        <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
-            <div style={{ display: 'flex' }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab('problem')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent',
-                  color: activeTab === 'problem' ? '#0284c7' : '#64748b',
-                }}
-              >
-                📄 事実・設問
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('drill')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent',
-                  color: activeTab === 'drill' ? '#2563eb' : '#64748b',
-                }}
-              >
-                📝 全科目起案ドリル・構成
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('statute')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent',
-                  color: activeTab === 'statute' ? '#0284c7' : '#64748b',
-                }}
-              >
-                📖 電子六法
-              </button>
-            </div>
-
-            {/* 管理者のみ表示：追加・編集・削除ボタン */}
-            {isAdmin && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(true)}
-                  style={{
-                    padding: '4px 10px',
-                    backgroundColor: '#10b981',
-                    color: '#ffffff',
-                    fontSize: '11px',
-                    fontWeight: '900',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
-                  }}
-                  title="新しい演習問題を追加"
-                >
-                  ＋ 新規問題
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleOpenEditModal}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    color: '#1d4ed8',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
-                  title="現在選択中の問題を編集"
-                >
-                  ✏️ 編集
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDeleteCurrentProblem}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#fff1f2',
-                    border: '1px solid #fecdd3',
-                    color: '#be123c',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  title="現在選択中の問題を削除"
-                >
-                  🗑️ 削除
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
-            {activeTab === 'problem' && (
-              <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
-                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                  【{currentProblem.subject}】{currentProblem.target_issue}
-                </div>
-                {currentProblem.fact_context}
-              </div>
-            )}
-
-            {activeTab === 'drill' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af' }}>
-                      ⚡️ {currentDrill.title}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleInsertDrillToDraft}
-                      style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#2563eb',
-                        color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      👉 答案欄に骨子を転送
-                    </button>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#3b82f6' }}>
-                    起案前の10分で即死地雷をチェックし、骨子を整理します。構成メモは答案提出時にAI講評で自動チェック・補完されます。
-                  </p>
-                </div>
-
-                <div style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#9f1239', marginBottom: '6px' }}>
-                    🚨 考査委員の即死地雷（致命的減点項目）
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', color: '#881337', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {currentDrill.fatalMistakes.map((mistake, idx) => (
-                      <li key={idx}>{mistake}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>
-                    📐 答案思考フレームワーク
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {currentDrill.logicFramework.map((fw, idx) => (
-                      <div key={idx} style={{ padding: '2px 0' }}>{fw}</div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>
-                      ✍️ 答案構成・メモ欄（クラウド自動保存中）
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDrillNotesChange(currentDrill.template)}
-                      style={{ fontSize: '10px', color: '#2563eb', border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      標準テンプレを挿入
-                    </button>
-                  </div>
-                  <textarea
-                    value={drillNotes}
-                    onChange={(e) => handleDrillNotesChange(e.target.value)}
-                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。&#10;※この内容は答案提出時にAI講評によって「思考フレームワーク・即死地雷」が自動判定・補完されます。"
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      padding: '10px',
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      outline: 'none',
-                      backgroundColor: '#ffffff',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'statute' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <form
-                  onSubmit={(e) => e.preventDefault()}
-                  style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <input
-                      type="text"
-                      placeholder="全条文検索：条文番号または語句 (例: 108, 無権代理, 94条2項, 詐害行為)"
-                      value={statuteSearchQuery}
-                      onChange={(e) => setStatuteSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.preventDefault();
-                      }}
-                      style={{ flex: 1, padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
-                    />
-                    {statuteSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setStatuteSearchQuery('')}
-                        style={{ padding: '6px 10px', fontSize: '11px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                      >
-                        クリア
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    {['ALL', '憲法', '行政事件訴訟法', '民法', '商法', '会社法', '刑法', '刑事訴訟法', '民事訴訟法', '独占禁止法'].map((law) => (
-                      <button
-                        key={law}
-                        type="button"
-                        onClick={() => setStatuteLawFilter(law)}
-                        style={{
-                          padding: '3px 8px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          borderRadius: '4px',
-                          border: statuteLawFilter === law ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                          backgroundColor: statuteLawFilter === law ? '#0284c7' : '#ffffff',
-                          color: statuteLawFilter === law ? '#ffffff' : '#475569',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {law === '行政事件訴訟法' ? '行政法' : law}
-                      </button>
-                    ))}
-                  </div>
-                </form>
-
-                {isSearchingStatutes && (
-                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#0284c7', fontWeight: 'bold', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
-                    ⏳ e-Gov法令データベースから全条文を検索中（初回のみ数秒かかります）...
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {(() => {
-                    // 1. ローカル頻出マスターの絞り込み
-                    const localCombined = [
-                      ...(currentProblem.statutes || []).map(s => ({
-                        law: s.law || currentProblem.subject || '',
-                        num: s.num || '',
-                        title: s.title || '',
-                        text: s.text || ''
-                      })),
-                      ...MASTER_STATUTES
-                    ];
-
-                    const qRaw = (statuteSearchQuery || '').trim();
-                    const qNorm = normalizeQuery(qRaw);
-
-                    const localFiltered = localCombined.filter(item => {
-                      const itemLaw = item.law || '';
-                      const matchLaw =
-                        statuteLawFilter === 'ALL' ||
-                        itemLaw.includes(statuteLawFilter) ||
-                        (statuteLawFilter === '商法' && itemLaw === '会社法');
-
-                      if (!qRaw) return matchLaw;
-
-                      const itemNumNorm = normalizeQuery(item.num || '');
-                      const itemTitleNorm = (item.title || '').toLowerCase();
-                      const itemTextNorm = (item.text || '').toLowerCase();
-
-                      return (
-                        matchLaw &&
-                        ((itemNumNorm.length > 0 && itemNumNorm.includes(qNorm)) ||
-                          itemTitleNorm.includes(qRaw.toLowerCase()) ||
-                          itemTextNorm.includes(qRaw.toLowerCase()))
-                      );
-                    });
-
-                    // 2. Supabase / e-Gov 全条文結果とマージ（重複除去）
-                    const mergedMap = new Map<string, { law: string; num: string; title: string; text: string }>();
-                    for (const item of [...remoteStatutes, ...localFiltered]) {
-                      const key = `${item.law}-${item.num}`;
-                      if (!mergedMap.has(key)) {
-                        mergedMap.set(key, item);
-                      }
-                    }
-
-                    const finalResults = Array.from(mergedMap.values());
-
-                    if (!isSearchingStatutes && finalResults.length === 0) {
-                      return (
-                        <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>
-                          該当する条文が見つかりませんでした。別の条文番号（例: 108, 113, 177）やキーワードでお試しください。
-                        </div>
-                      );
-                    }
-
-                    return finalResults.map((st, idx) => (
-                      <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                            {st.law} {st.num} {st.title}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(`【${st.law} ${st.num} ${st.title}】\n${st.text}\n`);
-                              alert(`${st.law} ${st.num} をコピーしました`);
-                            }}
-                            style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                          >
-                            📋 引用コピー
-                          </button>
-                        </div>
-                        <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>
-                          {st.text}
-                        </p>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 右ペイン */}
-        <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          <div style={{ height: '40px', padding: '0 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>✍️ 答案作成欄</span>
-              <span style={{ fontSize: '11px', color: '#64748b' }}>
-                文字数: <strong style={{ color: '#0f172a' }}>{userDraft.length}</strong> 字（約 {(userDraft.length / 690).toFixed(1)} 頁）
-              </span>
-            </div>
-
-            {/* 管理者のみ表示：AI厳格採点ボタン */}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleSubmitEvaluation}
-                disabled={isEvaluating}
-                style={{
-                  backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
-                  color: '#ffffff',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  cursor: isEvaluating ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
-              </button>
-            )}
-          </div>
-
-          <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex', overflow: 'hidden' }}>
-            <textarea
-              ref={textareaRef}
-              value={userDraft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={`【${currentProblem.target_issue}】の答案を作成してください。`}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '14px',
-                fontSize: fontSizes[fontSize].text,
-                lineHeight: fontSizes[fontSize].lh,
-                fontFamily: 'serif',
-                resize: 'none',
-                outline: 'none',
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {aiFeedback && (
-            <div style={{ flex: '1', borderTop: '2px solid #cbd5e1', backgroundColor: '#fffdf5', padding: '14px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#854d0e' }}>
-                  ⚖️ 考査委員採点講評（答案構成チェック・即死地雷判定を含む）
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAiFeedback(null)}
-                  style={{ fontSize: '10px', color: '#854d0e', border: '1px solid #fde047', backgroundColor: '#fef9c3', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                  閉じる
-                </button>
-              </div>
-
-              {saveSuccessMsg && (
-                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
-                  {
-return (
-    <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      
-      {/* 起案ヘッダー */}
-      <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>⚖️</span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
-            <select
-              value={selectedSubjectFilter}
-              onChange={(e) => handleSubjectChange(e.target.value)}
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                border: '1.5px solid #2563eb',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
-                cursor: 'pointer',
-                outline: 'none',
-              }}
-            >
-              <option value="ALL">全科目 ({problems.length})</option>
-              {availableSubjects.map((sub) => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
-            <select
-              value={selectedProblemId}
-              onChange={(e) => handleProblemChange(e.target.value)}
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                border: '1px solid #94a3b8',
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                cursor: 'pointer',
-                outline: 'none',
-                maxWidth: '280px'
-              }}
-            >
-              {filteredProblems.map((p) => (
-                <option key={p.id} value={p.id}>
-                  [{p.subject}] {p.target_issue}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
-            {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
-            {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => changeFontSize(level)}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '4px',
-                  border: fontSize === level ? '1px solid #0284c7' : 'none',
-                  backgroundColor: fontSize === level ? '#0284c7' : 'transparent',
-                  color: fontSize === level ? '#ffffff' : '#475569',
-                  cursor: 'pointer',
-                }}
-              >
-                {fontSizes[level].label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
-              ⏱ {formatTimer(secondsLeft)}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsTimerRunning(!isTimerRunning)}
-              style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                border: '1px solid #94a3b8',
-                backgroundColor: '#ffffff',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-              }}
-            >
-              {isTimerRunning ? '一時停止' : '開始'}
-            </button>
-          </div>
-
           <Link href={`/dashboard${adminQuery}`} style={dashboardNavStyle}>
             📊 答案履歴
           </Link>
@@ -1598,7 +1034,6 @@ return (
               </button>
             </div>
 
-            {/* 管理者のみ表示：追加・編集・削除ボタン */}
             {isAdmin && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
