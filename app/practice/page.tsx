@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-
-type DrillGuideItem = {
-  title: string;
-  fatalMistakes: string[];
-  logicFramework: string[];
-  template: string;
-};
+import {
+  SUBJECT_DRILL_GUIDES,
+  MASTER_STATUTES,
+  DEFAULT_PROBLEMS,
+  SUBJECT_ORDER,
+  ProblemType,
+} from '@/lib/practiceData';
 
 type GradingCostSummary = {
   inputTokens: number;
@@ -20,320 +20,6 @@ type GradingCostSummary = {
   costJpy: number;
 };
 
-const SUBJECT_DRILL_GUIDES: Record<string, DrillGuideItem> = {
-  '刑法': {
-    title: '刑法：主犯先行・法的三段論法・共犯論の射程',
-    fatalMistakes: [
-      '従属的関与者（共犯）から先に検討する（原則主犯・実行正犯から検討すること）',
-      '構成要件（実行行為・結果・因果関係・故意）の該当性検討の脱落',
-      '共犯からの離脱において「物理的・心理的因果性の遮断」の規範・あてはめを抜かす',
-      '不能犯、未遂、既遂の時期・客体の錯誤（法定的符合説）の認定漏れ'
-    ],
-    logicFramework: [
-      '① 構成要件該当性（客観的構成要件 → 主観的構成要件［故意・不法領得意思］）',
-      '② 違法性阻却事由（正当防衛36条1項：急迫不正の侵害・防衛の意思・相当性）',
-      '③ 責任阻却事由（責任能力・期待可能性・違法性の錯誤）',
-      '④ 共犯論（共同正犯60条：共謀・共謀に基づく実行・正犯性、因果的共犯論）'
-    ],
-    template: `第１ 甲の罪責\n１ 〇〇の行為について〇〇罪（刑法〇〇条）の成否を検討する。\n（１）構成要件該当性\n ア 規範：\n イ 当てはめ：\n（２）違法性・責任\n２ 共犯関係の検討（共謀・因果性の遮断等）\n\n第２ 乙の罪責\n１ ...`
-  },
-  '民法': {
-    title: '民法：要件事実・契約の成立から消滅・物権変動',
-    fatalMistakes: [
-      '請求の根拠（条文・訴訟物）を明示せずにいきなり信義則や一般論を展開する',
-      '請求原因・抗弁・再抗弁の主張立証責任の分配を混同する',
-      '対抗要件（177条）と無権利の法理（94条2項類推等）の峻別を誤る',
-      '物上保証人の代位（501条）と後順位担保権者の関係を見落とす'
-    ],
-    logicFramework: [
-      '① 請求の趣旨及び訴訟物の確定（所有権に基づく明渡、契約に基づく請求等）',
-      '② 請求原因事実の充足性（法律要件に対応する具体的生事実の摘示）',
-      '③ 被告の抗弁事由（売買・代物弁済482条・弁済・時効・解除等）',
-      '④ 原告の再抗弁事由（取消・無効・第三者弁済の有効要件・停止条件等）'
-    ],
-    template: `第１ 設問１について\n１ 訴訟物及び請求の根拠\n２ 請求原因事実の検討\n\n第２ 設問２について\n１ 相手方の抗弁の成否（要件事実の検討）\n\n第３ 設問３について\n１ 再抗弁及び攻撃防御構造の帰結`
-  },
-  '憲法': {
-    title: '憲法：三段階審査（保護範囲・制約・正当化）',
-    fatalMistakes: [
-      '原告の主張・被告の反論・私見の三段階構造を崩して単なる論述にする',
-      '精神的自由（表現・集会）に対し安易に緩やかな合理性の基準を適用する',
-      '「明白な危険」を客観的根拠なく感情的混乱で肯定する（敵意ある聴衆の法理の誤用）',
-      '法令違憲（明確性・過度の広汎性）と適用違憲を区別せずに論じる'
-    ],
-    logicFramework: [
-      '① 保護範囲（当該行為が憲法21条1項等のいかなる権利として保障されるか）',
-      '② 制約の態様（直接的・事前的制約か、間接的・付随的制約か）',
-      '③ 審査基準の定立（権利の重要性・制約態様の強度・パブリックフォーラム性）',
-      '④ 目的・手段の審査（目的の重大性・手段の必要最小限性・より緩やかな規制手段）'
-    ],
-    template: `第１ 原告の主張（制約の重大性・厳格な審査基準の定立）\n１ 保障と制約\n２ 法令違憲の主張（明確性の原則・過度の広汎性）\n３ 適用違憲の主張（明白な危険の欠如）\n\n第２ 被告（行政側）の反論\n\n第３ 私見（合憲性判断）`
-  },
-  '行政法': {
-    title: '行政法：処分性・原告適格・裁量審査・手続の瑕疵',
-    fatalMistakes: [
-      '処分性の要件（公権力性・国民の権利義務の直接具体的形成）の当てはめ不足',
-      '原告適格（行訴法9条2項）で関係法令の趣旨・個別的保護利益の検討を飛ばす',
-      '裁量統制において判断過程審査（事実誤認・考慮不尽・過大評価）を行わない',
-      '仮の救済（執行停止・仮の義務付け）の重大な損害要件を看過する'
-    ],
-    logicFramework: [
-      '① 訴訟要件の検討（処分性3条2項、原告適格9条1項・2項、訴えの利益）',
-      '② 本案違法事由（根拠法令の要件該当性、法規適合性）',
-      '③ 裁量権の逸脱濫用の審査（30条：事実誤認・他目的考慮・考慮不尽・比例原則違反）'
-    ],
-    template: `第１ 設問１（訴訟要件：処分性／原告適格）\n１ 規範定立：\n２ 本件への当てはめ：\n\n第２ 設問２（本案の違法性：裁量権の逸脱濫用）\n１ 裁量の有無及び範囲\n２ 判断過程の合理性（考慮不尽・事実誤認の検討）`
-  },
-  '商法': {
-    title: '商法・会社法：機関権限・新株発行・役員責任',
-    fatalMistakes: [
-      '取締役会決議と株主総会決議の権限分配の混同',
-      '特別利害関係取締役（369条2項）の該当性と退席・定足数の検討漏れ',
-      '確定した役員報酬（361条1項）の一方的減額における個別同意要件の看過',
-      '新株発行無効の訴え（828条1項2号）における瑕疵の重大性と取引安全の衡量不足'
-    ],
-    logicFramework: [
-      '① 意思決定手続の適法性（招集通知・定足数・議決要件）',
-      '② 特別利害関係（忠実義務違反の蓋然性・個人の地位剥奪）',
-      '③ 支配権移転新株発行（206条の2、主要目的ルール、通知送達の悪意）',
-      '④ 訴訟手段の選択（新株発行無効の訴え、役員報酬差額請求等）'
-    ],
-    template: `第１ 設問１について\n１ 代表取締役解職決議の効力（会社法369条2項・特別利害関係）\n２ 役員報酬減額の有効性とAの請求（361条1項・具体的権利性）\n\n第２ 設問２について\n１ 新株発行無効の訴え（828条1項2号）の可否と無効事由`
-  },
-  '民事訴訟法': {
-    title: '民訴法：訴訟物・自己利用文書・重複起訴・既判力',
-    fatalMistakes: [
-      '自己利用文書（220条4号ニ）を単に社外秘だからと結論付ける',
-      '一部請求本訴係属中の反訴相殺における142条重複起訴の論証抜け',
-      '既判力の客観的範囲（114条1項・2項）と争点効・信義則の混同',
-      '処分権主義・弁論主義の第1・第2・第3テーゼの適用の誤り'
-    ],
-    logicFramework: [
-      '① 訴訟物の特定と審判対象の画定（一部請求の許容性と残部請求）',
-      '② 文書提出命令（220条4号ニ：作成目的・記載内容・開示不利益の総合考慮）',
-      '③ 反訴と相殺の抗弁（重複起訴禁止142条、二重審理・既判力抵触のおそれ、予備的抗弁の構成）'
-    ],
-    template: `第１ 設問１について（自己利用文書の該当性）\n１ 民事訴訟法220条4号ニの解釈規範\n２ 本件予測表の該当性（Yの反論とXの立論）\n\n第２ 設問２について（反訴における相殺の抗弁）\n１ 本訴未請求部分（2億円）の適法性\n２ 本訴請求部分（1億円）の適法性（142条類推適用の要否）`
-  },
-  '刑事訴訟法': {
-    title: '刑訴法：強制処分・令状主義・伝聞法則・訴因変更',
-    fatalMistakes: [
-      '伝聞証拠（320条1項）の要証事実を誤って非伝聞を伝聞と判定する',
-      '写真撮影報告書の電磁的記録の機械的正確性（原本性・同一性）の立証を抜かす',
-      '訴因変更の限界（312条1項）で基本的事実関係の同一性の二段階基準を飛ばす',
-      '客体の生死不明時における択一的認定と無罪推定（利益原則）の調和論証不足'
-    ],
-    logicFramework: [
-      '① 捜査手続の適法性（任意捜査の限界・強制処分法定主義・令状主義）',
-      '② 証拠能力（伝聞法則320条：公判外供述・要証事実・言語的行為、321条例外）',
-      '③ 訴因変更（312条1項：公訴事実の同一性、日時・場所・行為態様の共通性）',
-      '④ 判決（択一的認定の許容性・実質的重なり合い・軽い罪の限度での処断）'
-    ],
-    template: `第１ 設問１について（予備的訴因追加の可否）\n１ 公訴事実の同一性（312条1項）の判断基準\n２ 本件への当てはめ（基本的事実関係の共通性）\n\n第２ 設問２について（客体の生死不明と択一的認定）\n１ 無罪推定の原則（疑わしきは被告人の利益に）\n２ 構成要件の実質的重なり合いと軽い罪の認定`
-  },
-  '民事実務': {
-    title: '民事実務：要件事実・二段の推定・民事保全',
-    fatalMistakes: [
-      '訴訟物の個数・併合態様（単純併合・予備的併合）の記載漏れ',
-      '二段の推定（民訴法228条4項）の1段目（事実上の推定）と2段目（法定推定）の混同',
-      '代物弁済（482条）における登記完了・目的物引渡しの要件事実の誤記',
-      '保全の必要性（民事保全法23条1項）の具体的保全事由（生前贈与・現状変更）の摘示不足'
-    ],
-    logicFramework: [
-      '① 訴訟物・請求の趣旨・請求原因事実の完全摘示（よって書き不要）',
-      '② 抗弁事実（代物弁済、債権譲渡通知467条1項）',
-      '③ 二段の推定の構造と印影の盗用・冒用（間接事実：時価との乖離・印章保管・客観行動）',
-      '④ 民事保全（占有移転禁止の仮処分・処分禁止の仮処分）'
-    ],
-    template: `第１ 設問１（訴訟物・請求の趣旨・請求原因・保全）\n１ 訴訟物（個数・併合態様）：\n２ 請求の趣旨：\n３ 請求原因事実：\n４ 民事保全命令及び保全の必要性：\n\n第２ 設問２（抗弁の要件事実：代物弁済）\n\n第３ 設問３（二段の推定と事実認定の展開）`
-  },
-  '刑事実務': {
-    title: '刑事実務：故意・共謀の事実認定・証拠法・共犯の既遂時期',
-    fatalMistakes: [
-      '詐欺の故意で積極事実と消極事実を対比せずに単一方向のみ述べる',
-      '客観的証拠（ICカード・領収書）による供述変遷・外堀固定のプロセスを看過する',
-      '事件単位の原則に基づく起訴後余罪取調べ受忍義務否定の条文根拠欠落',
-      '詐欺の既遂時期（受領時）と回収役の承継的共同正犯の先後関係の誤認'
-    ],
-    logicFramework: [
-      '① 犯人性・客観的証拠（ICカード・領収書等による否認供述弾劾）',
-      '② 故意の事実認定（積極事実 vs 消極事実）',
-      '③ 取調べ受忍義務（余罪に対する勾留効力の不及び・起訴後当事者対立構造）',
-      '④ 証拠法（スマホDM写真の非伝聞性・立証趣旨限定・原本性立証）',
-      '⑤ 共犯の既遂時期と承継的共同正犯（既遂後の盗品等運搬罪256条2項）'
-    ],
-    template: `第１ 設問１（客観的証拠収集の捜査理由）\n\n第２ 設問２（詐欺の故意の事実認定：積極事実と消極事実の対比）\n１ 故意の内容（未必の故意）：\n２ 積極事実の摘示と評価：\n３ 消極事実の評価：\n４ 総合判断：\n\n第３ 設問３（余罪・起訴後取調べ受忍義務の否定）\n\n第４ 設問４（スマホ写真の証拠能力と立証活動）\n\n第５ 設問５（詐欺の既遂時期と承継的共同正犯の成否）`
-  },
-  '租税法': {
-    title: '租税法：法人税所得計算・実質所得者課税・資産損失',
-    fatalMistakes: [
-      '法人税法22条の益金・損金の権利確定主義の検討抜け',
-      '所得税法12条（実質所得者課税の原則）で法律的帰属説と経済的帰属説を対比しない',
-      '倒壊危険建物の解体費用を誤って土地譲渡費用（33条3項）と断定する',
-      '所得税法51条1項の資産損失の未償却残高計算（取得費−償却累計額）の誤算'
-    ],
-    logicFramework: [
-      '① 法人税所得計算（22条：低廉購入の受贈益の有無、売上計上と権利確定）',
-      '② 所得の人的帰属（所得税法12条：名義と実質的果実享受・支配管理）',
-      '③ 必要経費（37条、51条4項：解体費用の不動産所得性）',
-      '④ 資産損失（51条1項、施行令142条1号：簿価の損失算入と損益通算69条）'
-    ],
-    template: `第１ 設問１について（A社の法人税所得計算・法人税法22条）\n\n第２ 設問２について（所得の人的帰属・所得税法12条）\n１ 人的帰属の原則：\n２ Cの主張（法律的帰属説）：\n３ 税務署長の主張（経済的帰属・実質支配説）：\n\n第３ 設問３について（解体費用及び資産損失の計算）`
-  },
-  '経済法': {
-    title: '経済法：不当な取引制限・意思の連絡・官製談合・競争の実質的制限',
-    fatalMistakes: [
-      '「一定の取引分野（市場画定）」の明示を飛ばしていきなり競争制限を論じる',
-      '「意思の連絡」を契約書の存在と誤解する（暗黙の了解・同調認識で足りる）',
-      '発注者関与（情報提示・納入調整）を理由に事業者の独禁法違反を免責する',
-      '落札率99.7%などの具体的生事実を競争の実質的制限のあてはめで引用しない'
-    ],
-    logicFramework: [
-      '① 主体要件（事業者2条1項）',
-      '② 行為要件（共同して：意思の連絡、相互拘束・遂行）',
-      '③ 一定の取引分野の画定（甲製品の調達入札市場）',
-      '④ 競争の実質的制限（東宝スバル座判例：市場支配力の形成・維持）',
-      '⑤ 公共の利益に反して（実質的違法性阻却事由の不存在）',
-      '⑥ 発注者関与（官製談合）の評価と事業者の法的責任'
-    ],
-    template: `第１ ２社の行為と不当な取引制限（独占禁止法2条6項、3条後段）の成否\n１ 「事業者」該当性（2条1項）\n２ 「共同して」（意思の連絡の認定）\n３ 「相互にその事業活動を拘束」\n４ 「一定の取引分野における競争を実質的に制限」\n５ 発注者Aの関与（官製談合）と２社の責任`
-  }
-};
-
-const MASTER_STATUTES = [
-  { law: '憲法', num: '第13条', title: '個人の尊重・幸福追求権', text: 'すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。' },
-  { law: '憲法', num: '第14条第1項', title: '法の下の平等', text: 'すべて国民は、法の下に平等であつて、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。' },
-  { law: '憲法', num: '第15条', title: '公務員の選定罷免権及び性質・普通選挙の保障', text: '1 公務員を選定し、及びこれを罷免することは、国民固有の権利である。\n2 すべて公務員は、全体の奉仕者であつて、一部の奉仕者ではない。\n3 公務員の選挙については、成年者による普通選挙を保障する。\n4 すべて選挙における投票の秘密は、これを侵してはならない。選挙人は、その選択に関し公的にも私的にも責任を問はれない。' },
-  { law: '憲法', num: '第21条', title: '表現の自由', text: '1 集会、結社及び言論、出版その他一切の表現の自由は、これを保障する。\n2 検閲は、これをしてはならない。通信の秘密は、これを侵してはならない。' },
-  { law: '憲法', num: '第22条第1項', title: '職業選択の自由', text: '何人も、公共の福祉に反しない限り、居住、移転及び職業選択の自由を有する。' },
-  { law: '憲法', num: '第29条', title: '財産権', text: '1 財産権は、これを侵してはならない。\n2 財産権の内容は、公共の福祉に適合するやうに、法律でこれを定める。\n3 私有財産は、正当な補償の下に、これを公共のために用ひることができる。' },
-  { law: '憲法', num: '第31条', title: '適正手続の保障', text: '何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。' },
-
-  { law: '民法', num: '第3条の2', title: '意思能力', text: '法律行為の当事者が意思表示をした時に意思能力を有しなかったときは、その法律行為は、無効とする。' },
-  { law: '民法', num: '第5条', title: '未成年者の法律行為', text: '1 未成年者が法律行為をするには、その法定代理人の同意を得なければならない。ただし、単に権利を得、又は義務を免れる法律行為については、この限りでない。\n2 前項の規定に反する法律行為は、取り消すことができる。' },
-  { law: '民法', num: '第15条', title: '保佐開始の審判', text: '1 精神上の障害により事理を弁識する能力が著しく不十分である者については、家庭裁判所は、本人、配偶者、四親等内の親族、後見人、後見監督人、補助人、補助監督人又は検察官の請求により、保佐開始の審判をすることができる。\n2 本人以外の者の請求により保佐開始の審判をするには、本人の同意がなければならない。' },
-  { law: '民法', num: '第21条', title: '制限行為能力者の詐術', text: '制限行為能力者が行為能力者であることを信じさせるため詐術を用いたときは、その行為を取り消すことができない。' },
-  { law: '民法', num: '第93条', title: '心裡留保', text: '1 意思表示は、表意者がその真意ではないことを知ってしたときであっても、そのためにその効力を妨げられない。ただし、相手方がその意思表示が表意者の真意ではないことを知り、又は知ることができたときは、その意思表示は、無効とする。\n2 前項ただし書の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
-  { law: '民法', num: '第94条', title: '虚偽表示', text: '1 相手方と通じてした虚偽の意思表示は、無効とする。\n2 前項の規定による意思表示の無効は、善意の第三者に対抗することができない。' },
-  { law: '民法', num: '第95条', title: '錯誤', text: '1 意思表示は、次に掲げる錯誤に基づくものであって、その錯誤が法律行為の目的及び取引上の社会通念に照らして重要なものであるときは、取り消すことができる。\n一 意思表示に対応する意思を欠く錯誤\n二 表意者が法律行為の基礎とした事情についてのその認識が真実に反する錯誤\n2 前項第二号の規定による意思表示の取消しは、その事情が法律行為の基礎とされていることが表示されていたときに限り、することができる。\n3 錯誤が表意者の重大な過失によるものであった場合には、次に掲げる場合を除き、第一項の規定による意思表示の取消しをすることができない。\n4 第一項の規定による意思表示の取消しは、善意でかつ過失がない第三者に対抗することができない。' },
-  { law: '民法', num: '第96条', title: '詐欺又は強迫', text: '1 詐欺又は強迫による意思表示は、取り消すことができる。\n2 相手方に対する意思表示について第三者が詐欺を行った場合においては、相手方がその事実を知り、又は知ることができたときに限り、その意思表示を取り消すことができる。\n3 前二項の規定による詐欺による意思表示の取消しは、善意でかつ過失がない第三者に対抗することができない。' },
-  { law: '民法', num: '第99条', title: '代理行為の要件及び効果', text: '1 代理人がその権限内において本人のためにすることを示してした意思表示は、本人に対して直接にその効力を生ずる。\n2 前項の規定は、第三者が代理人に対してした意思表示について準用する。' },
-  { law: '民法', num: '第107条', title: '代理権の濫用', text: '代理人が自己又は第三者の利益を図る目的で代理権の範囲内の行為をした場合において、相手方がその目的を知り、又は知ることができたときは、その行為は、代理権を有しない者がした行為とみなす。' },
-  { law: '民法', num: '第108条', title: '自己契約及び双方代理等', text: '1 同一の法律行為について、相手方の代理人として、又は当事者双方の代理人としてした行為は、代理権を有しない者がした行為とみなす。ただし、債務の履行及び本人があらかじめ許諾した行為については、この限りでない。\n2 前項本文に規定するもののほか、代理人と本人との利益が相反する行為については、代理権を有しない者がした行為とみなす。ただし、本人があらかじめ許諾した行為については、この限りでない。' },
-  { law: '民法', num: '第109条', title: '代理権授与の表示による表見代理等', text: '1 第三者に対して他人に代理権を与えた旨を表示した者は、その代理権の範囲内においてその他人が第三者との間でした行為について、その責任を負う。ただし、第三者が、その他人が代理権を与えられていないことを知り、又は過失によって知らなかったときは、この限りでない。' },
-  { law: '民法', num: '第110条', title: '権限外の行為の表見代理', text: '前条第一項本文の規定は、代理人がその権限外の行為をした場合において、第三者が代理人の権限があると信ずべき正当な理由があるときについて準用する。' },
-  { law: '民法', num: '第112条', title: '代理権消滅後の表見代理等', text: '1 他人に代理権を与えた者は、代理権の消滅後にその代理権の範囲内においてその他人が第三者との間でした行為について、代理権の消滅の事実を知らなかった第三者に対してその責任を負う。ただし、第三者が過失によってその事実を知らなかったときは、この限りでない。' },
-  { law: '民法', num: '第113条', title: '無権代理', text: '1 代理権を有しない者が他人の代理人としてした契約は、本人がその追認をしなければ、本人に対してその効力を生じない。\n2 追認又はその拒絶は、相手方に対してしなければ、その相手方に対抗することができない。ただし、相手方がその事実を知ったときは、この限りでない。' },
-  { law: '民法', num: '第116条', title: '無権代理行為の追認', text: '追認は、別段の意思表示がないときは、契約の時にさかのぼってその効力を生ずる。ただし、第三者の権利を害することはできない。' },
-  { law: '民法', num: '第117条', title: '無権代理人の責任', text: '1 他人の代理人として契約をした者は、自己の代理権を証明したとき、又は本人の追認を得たときを除き、相手方の選択に従い、相手方に対して履行又は損害賠償の責任を負う。\n2 前項の規定は、次に掲げる場合には、適用しない。\n一 他人の代理人として契約をした者が代理権を有しないことを相手方が知っていたとき。\n二 他人の代理人として契約をした者が代理権を有しないことを相手方が過失によって知らなかったとき。ただし、他人の代理人として契約をした者が自己に代理権がないことを知っていたときは、この限りでない。\n三 他人の代理人として契約をした者が行為能力の制限を受けていたとき。' },
-  { law: '民法', num: '第162条', title: '所有権の取得時効', text: '1 二十年間、所有の意思をもって、平穏に、かつ、公然と他人の物を占有した者は、その所有権を取得する。\n2 十年間、所有の意思をもって、平穏に、かつ、公然と他人の物を占有した者は、その占有の開始の時に、善意であり、かつ、過失がなかったときは、その所有権を取得する。' },
-
-  { law: '民法', num: '第177条', title: '不動産に関する物権の変動の対抗要件', text: '不動産に関する物権の得喪及び変更は、不動産登記法その他の登記に関する法律の定めるところに従いその登記をしなければ、第三者に対抗することができない。' },
-  { law: '民法', num: '第178条', title: '動産に関する物権の譲渡の対抗要件', text: '動産に関する物権の譲渡は、その動産の引渡しがなければ、第三者に対抗することができない。' },
-  { law: '民法', num: '第192条', title: '即時取得', text: '取引行為によって、平穏に、かつ、公然と動産の占有を始めた者は、善意であり、かつ、過失がないときは、即時にその動産について行使する権利を取得する。' },
-  { law: '民法', num: '第295条', title: '留置権の内容', text: '1 他人の物の占有者は、その物に関して生じた債権を有するときは、その債権の弁済を受けるまで、その物を留置することができる。ただし、その債権が弁済期にないときは、この限りでない。\n2 前項の規定は、占有が不法行為によって始まった場合には、適用しない。' },
-  { law: '民法', num: '第304条', title: '物上代位', text: '1 先取特権は、その目的物の売却、賃貸、滅失又は損傷によって債務者が受けるべき金銭その他の物に対しても、行使することができる。ただし、先取特権者は、その払渡し又は引渡しの前に差押えをしなければならない。' },
-  { law: '民法', num: '第369条', title: '抵当権の内容', text: '1 抵当権者は、債務者又は第三者が占有を移転しないで債務の担保に供した不動産について、他の債権者に先立って自己の債権の弁済を受ける権利を有する。' },
-  { law: '民法', num: '第372条', title: '留置権等の規定の準用（抵当権の物上代位）', text: '第二百九十六条、第三百四条及び第三百五十一条の規定は、抵当権について準用する。' },
-  { law: '民法', num: '第388条', title: '法定地上権', text: '土地及びその上に存する建物が同一の所有者に属する場合において、その土地又は建物につき抵当権が設定され、その実行により所有者を異にするに至ったときは、その建物について、地上権が設定されたものとみなす。この場合において、地代は、当事者の請求により、裁判所が定める。' },
-
-  { law: '民法', num: '第415条', title: '債務不履行による損害賠償', text: '1 債務者がその債務の本旨に従った履行をしないとき又は債務の履行が不能であるときは、債権者は、これによって生じた損害の賠償を請求することができる。ただし、その債務の不履行が契約その他の債務の発生原因及び取引上の社会通念に照らして債務者の責めに帰することができない事由によるものであるときは、この限りでない。' },
-  { law: '民法', num: '第423条', title: '債権者代位権の要件', text: '1 債権者は、自己の債権を保全するため必要があるときは、債務者に属する権利を行使することができる。ただし、債務者の一身に専属する権利及び差押えを禁ぜられた権利は、この限りでない。' },
-  { law: '民法', num: '第424条', title: '詐害行為取消請求', text: '1 債権者は、債務者が債権者を害することを知ってした行為の取消しを裁判所に請求することができる。ただし、その行為によって利益を受けた者がその行為の時において債権者を害することを知らなかったときは、この限りでない。' },
-  { law: '民法', num: '第466条', title: '債権の譲渡性', text: '1 債権は、譲り渡すことができる。ただし、その性質がこれを許さないときは、この限りでない。\n2 当事者が債権の譲渡を禁止し、又は制限する旨の意思表示をしたときであっても、債権の譲渡は、その効力を妨げられない。' },
-  { law: '民法', num: '第467条', title: '債権の譲渡の対抗要件', text: '1 債権の譲渡（現に発生していない債権の譲渡を含む。）は、譲渡人が債務者に通知をし、又は債務者が承諾をしなければ、債務者その他の第三者に対抗することができない。\n2 前項の通知又は承諾は、確定日付のある証書によってしなければ、債務者以外の第三者に対抗することができない。' },
-  { law: '民法', num: '第482条', title: '代物弁済', text: '債務者が、債権者の承諾を得て、その負担した給付に代えて他の給付をしたときは、その給付は、弁済と同一の効力を有する。' },
-  { law: '民法', num: '第501条', title: '弁済による代位の効力', text: '1 前二条の規定により債権者に代位した者は、債権の効力及び担保としてその債権者が有していた一切の権利を行使することができる。' },
-  { law: '民法', num: '第505条', title: '相殺の要件等', text: '1 二人が互いに同種の目的を有する債務を負担する場合において、双方の債務が弁済期にあるときは、各債務者は、その対当額について相殺によってその債務を免れることができる。ただし、債務の性質がこれを許さないときは、この限りでない。' },
-  { law: '民法', num: '第533条', title: '同時履行の抗弁', text: '双務契約の当事者の一方は、相手方がその債務の履行（債務の履行に代わる損害賠償の債務の履行を含む。）を提供するまでは、自己の債務の履行を拒むことができる。ただし、相手方の債務が弁済期にないときは、この限りでない。' },
-  { law: '民法', num: '第541条', title: '催告による解除', text: '当事者の一方がその債務を履行しない場合において、相手方が相当の期間を定めてその履行の催告をし、その期間内に履行がないときは、相手方は、契約の解除をすることができる。' },
-  { law: '民法', num: '第542条', title: '催告によらない解除', text: '1 次に掲げる場合には、債権者は、前条の催告をすることなく、直ちに契約の解除をすることができる。\n一 債務の全部の履行が不能であるとき。\n二 債務者がその債務の全部の履行を拒絶する意思を明確に表示したとき。' },
-  { law: '民法', num: '第562条', title: '買主の追完請求権', text: '1 引き渡された目的物が種類、品質又は数量に関して契約の内容に適合しないものであるときは、買主は、売主に対し、目的物の修補、代替物の引渡し又は不足分の引渡しによる履行の追完を請求することができる。' },
-  { law: '民法', num: '第709条', title: '不法行為による損害賠償', text: '故意又は過失によって他人の権利又は法律上保護される利益を侵害した者は、これによって生じた損害を賠償する責任を負う。' },
-  { law: '民法', num: '第715条', title: '使用者等の責任', text: '1 ある事業のために他人を使用する者は、被用者がその事業の執行について第三者に加えた損害を賠償する責任を負う。ただし、使用者が被用者の選任及びその事業の監督について相当の注意をしたとき、又は相当の注意をしても損害が生ずべきであったときは、この限りでない。' },
-
-  { law: '刑法', num: '第36条', title: '正当防衛', text: '1 急迫不正の侵害に対して、自己又は他人の権利を防衛するため、やむを得ずにした行為は、罰しない。\n2 防衛の程度を超えた行為は、情状により、その刑を減軽し、又は免除することができる。' },
-  { law: '刑法', num: '第38条', title: '故意', text: '1 罪を犯す意思がない行為は、罰しない。ただし、法律に特別の規定がある場合は、この限りでない。' },
-  { law: '刑法', num: '第60条', title: '共同正犯', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
-  { law: '刑法', num: '第61条', title: '教唆', text: '1 人を教唆して犯罪を実行させた者には、正犯の刑を科する。' },
-  { law: '刑法', num: '第62条', title: '幇助', text: '1 正犯を幇助した者は、従犯とする。' },
-  { law: '刑法', num: '第199条', title: '殺人', text: '人を殺した者は、死刑又は無期若しくは五年以上の懲役に処する。' },
-  { law: '刑法', num: '第204条', title: '傷害', text: '人の身体を傷害した者は、十五年以下の懲役又は五十万円以下の罰金に処する。' },
-  { law: '刑法', num: '第235条', title: '窃盗', text: '他人の財物を窃取した者は、窃盗の罪とし、十年以下の懲役又は五十万円以下の罰金に処する。' },
-  { law: '刑法', num: '第236条', title: '強盗', text: '1 暴行又は脅迫を用いて他人の財物を強取した者は、強盗の罪とし、五年以上の有期懲役に処する。' },
-  { law: '刑法', num: '第240条', title: '強盗致死傷', text: '強盗が、人を負傷させたときは無期又は六年以上の懲役に処し、死亡させたときは死刑又は無期懲役に処する。' },
-  { law: '刑法', num: '第246条', title: '詐欺', text: '1 人を欺いて財物を交付させた者は、十年以下の懲役に処する。\n2 前項の方法により、財産上不法の利益を得、又は他人にこれを得させた者も、同項と同様とする。' },
-  { law: '刑法', num: '第252条', title: '横領', text: '1 自己の占有する他人の物を横領した者は、五年以下の懲役に処する。' },
-
-  { law: '会社法', num: '第199条', title: '募集株式の募集事項の決定', text: '1 株式会社は、その発行する株式を引き受ける者の募集をしようとするときは、その都度、募集株式について次に掲げる事項を定めなければならない。' },
-  { law: '会社法', num: '第356条', title: '競業及び利益相反取引の制限', text: '1 取締役は、次に掲げる場合には、株主総会（取締役会設置会社にあっては、取締役会）において、当該取引につき重要な事実を開示し、その承認を受けなければならない。\n一 取締役が自己又は第三者のために株式会社の事業の部類に属する取引をしようとするとき。\n二 取締役が自己又は第三者のために株式会社と取引をしようとするとき。' },
-  { law: '会社法', num: '第361条', title: '取締役の報酬等', text: '1 取締役の報酬、賞与その他の職務執行の対価として株式会社から受ける財産上の利益についての次に掲げる事項は、定款に当該事項を定めていないときは、株主総会の決議によって定める。' },
-  { law: '会社法', num: '第369条', title: '取締役会の決議', text: '1 取締役会の決議は、議決に加わることができる取締役の過半数が出席し、その過半数をもって行う。\n2 前項の決議について特別の利害関係を有する取締役は、議決に加わることができない。' },
-  { law: '会社法', num: '第423条', title: '役員等の株式会社に対する損害賠償責任', text: '1 取締役、会計参与、監査役、執行役又は会計監査人は、その任務を怠ったときは、株式会社に対し、これによって生じた損害を賠償する責任を負う。' },
-  { law: '会社法', num: '第429条', title: '役員等の第三者に対する損害賠償責任', text: '1 役員等がその職務を行うについて悪意又は重大な過失があったときは、当該役員等は、これによって第三者に生じた損害を賠償する責任を負う。' },
-  { law: '会社法', num: '第828条', title: '会社の組織に関する行為の無効の訴え', text: '1 次の各号に掲げる行為の無効は、当該各号に定める期間内に、訴えをもってのみ主張することができる。\n一 株式会社の設立 成立の日から二年以内\n二 新株発行 効力発生日から六箇月以内（非公開会社は一年以内）' },
-
-  { law: '民事訴訟法', num: '第114条', title: '既判力の範囲', text: '1 確定判決は、主文に包含するものに限り、既判力を有する。\n2 相殺のために主張した請求の成立又は不成立の判断は、相殺をもって対抗した額について既判力を有する。' },
-  { law: '民事訴訟法', num: '第142条', title: '二重起訴の禁止', text: '裁判所に係属する事件については、当事者は、更に訴えを提起することができない。' },
-  { law: '民事訴訟法', num: '第220条', title: '文書提出義務', text: '次に掲げる場合において、所持者は、その提出を拒むことができない。\n四 専ら文書の所持者の利用に供するための文書（自己利用文書）に該当しないとき。' },
-  { law: '民事訴訟法', num: '第228条第4項', title: '私文書の成立の真正の推定', text: '私文書は、本人又はその代理人の署名又は押印があるときは、真正に成立したものと推定する。' },
-
-  { law: '刑事訴訟法', num: '第197条第1項', title: '捜査の基本原則', text: '捜査については、その目的を達するため必要な取調をすることができる。但し、強制の処分は、この法律に特別の定のある場合でなければ、これをすることができない。' },
-  { law: '刑事訴訟法', num: '第218条第1項', title: '令状による捜索・差押え・検証', text: '検察官、検察事務官又は司法警察職員は、犯罪の捜査をするについて必要があるときは、裁判官の発する令状により、差押、捜索又は検証をすることができる。' },
-  { law: '刑事訴訟法', num: '第312条第1項', title: '訴因の変更', text: '裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、訴因又は罰条の追加、撤回又は変更を許さなければならない。' },
-  { law: '刑事訴訟法', num: '第320条第1項', title: '伝聞証拠の禁止', text: '第三百二十一条乃至第三百二十八条に規定する場合を除いては、公判期日における供述に代へて書面を証拠とし、又は公判期日外における他の者の供述を内容とする供述を証拠とすることはできない。' },
-
-  { law: '行政事件訴訟法', num: '第3条第2項', title: '処分の取消しの訴え', text: 'この法律において「処分の取消しの訴え」とは、行政庁の処分その他公権力の行使に当たる行為の取消しを求める訴訟をいう。' },
-  { law: '行政事件訴訟法', num: '第9条', title: '原告適格', text: '1 処分の取消しの訴え及び裁決の取消しの訴えは、当該処分又は裁決の取消しを求めるにつき法律上の利益を有する者に限り、提起することができる。\n2 裁判所は、処分又は裁決の相手方以外の者が法律上の利益を有するかどうかを判断するに当たっては、当該処分又は裁決の根拠となる法令の規定の趣旨及び目的等を参酌しなければならない。' },
-  { law: '行政事件訴訟法', num: '第30条', title: '裁量処分の取消し', text: '行政庁の裁量処分については、裁量権の範囲をこえ又はその濫用があった場合に限り、裁判所は、その処分を取り消すことができる。' },
-
-  { law: '独占禁止法', num: '第2条第6項', title: '不当な取引制限の定義', text: '事業者が、他の事業者と共同して対価を決定し、維持し、若しくは引き上げ、又は数量、取引の相手方を制限する等相互にその事業活動を拘束し、若しくは遂行することにより、公共の利益に反して、一定の取引分野における競争を実質的に制限することをいう。' },
-  { law: '独占禁止法', num: '第3条', title: '私的独占及び不当な取引制限の禁止', text: '事業者は、私的独占又は不当な取引制限をしてはならない。' }
-];
-
-type ProblemType = {
-  id: string;
-  subject: string;
-  source_exam: string;
-  target_issue: string;
-  fact_context: string;
-  time_limit_minutes: number;
-  standard_norm?: string;
-  key_facts?: string[];
-  statutes?: { law?: string; num?: string; title: string; text: string }[];
-};
-
-const DEFAULT_PROBLEMS: ProblemType[] = [
-  {
-    id: 'c10919f3-ec0d-4db4-b860-34bf19becaae',
-    subject: '刑法',
-    source_exam: '予備試験 論文式',
-    target_issue: '共犯からの離脱・強盗致傷罪の共同正犯',
-    time_limit_minutes: 70,
-    fact_context: `【事実】
-1. 甲は、乙と共に、夜間に一人暮らしの高齢女性V（75歳）方に押し入り、現金を強取することを計画した。
-2. 計画当日、甲と乙はV方付近に赴き、甲はあらかじめ用意していた金属製バール（長さ約60センチメートル）及び粘着テープを乙に手渡した。甲の担当は見張りおよび逃走用車両の運転であり、乙の担当はV方に侵入して現金を奪うことであった。
-3. 乙がバールを用いてV方の勝手口の施錠を破壊し、屋内に侵入しようとした直前、甲は急に罪悪感を覚え、「おい乙、やっぱりこんな危険なことはやめよう。引き返そう」と言って乙の肩を掴んだ。
-4. しかし、乙は甲の手を激しく振り払い、「ここまで来てやめられるか！お前が逃げても俺は一人でやる」と言い放ち、そのまま屋内に侵入した。
-5. 甲はその場に留まることなく、用意していた車両に乗って一人で現場を立ち去った。
-6. 乙は屋内で物色中、目を覚ましたVに見つかったため、持っていたバールでVの頭部を強打して全治3週間の傷害を負わせ、現金100万円を強取して逃走した。
-
-【設問】
-甲の罪責を論ぜよ（建造物侵入罪の成否を除く）。`,
-    standard_norm: '共犯関係からの離脱が認められるためには、離脱の意思表示と相手方の了承、または当初の共謀に基づく因果性の遮断（物理的・心理的因果性の除去）が必要である。凶器を提供した場合は、その回収等積極的除去が不可欠。',
-    key_facts: [
-      '甲が主導的に計画を立て、凶器（バール）と粘着テープを乙に提供したこと',
-      '着手直前に甲が離脱を申し出たが乙は拒絶して実行を継続したこと',
-      '甲が提供したバールが実際に強盗および暴行（傷害結果）に使用されたこと',
-      '甲が現場を立ち去ったのみで乙の犯行を積極的に制止しなかったこと'
-    ],
-    statutes: [
-      { law: '刑法', num: '第60条', title: '共同正犯', text: '二人以上共同して犯罪を実行した者は、すべて正犯とする。' },
-      { law: '刑法', num: '第240条', title: '強盗致死傷', text: '強盗が、人を負傷させたときは無期又は六年以上の懲役に処し、死亡させたときは死刑又は無期懲役に処する。' }
-    ]
-  }
-];
-
 type FontSizeLevel = 'sm' | 'base' | 'lg' | 'xl';
 
 const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string }> = {
@@ -342,11 +28,6 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   lg: { text: '17px', lh: '1.85', label: '大' },
   xl: { text: '20px', lh: '1.95', label: '特大' },
 };
-
-const SUBJECT_ORDER = [
-  '憲法', '行政法', '民法', '商法', '民事訴訟法', '刑法', '刑事訴訟法',
-  '民事実務', '刑事実務', '租税法', '経済法'
-];
 
 const dashboardNavStyle: React.CSSProperties = {
   padding: '4px 10px',
@@ -397,7 +78,7 @@ export default function PracticePage() {
   const [drillNotes, setDrillNotes] = useState('');
   const [activeTab, setActiveTab] = useState<'problem' | 'drill' | 'statute'>('problem');
   const [fontSize, setFontSize] = useState<FontSizeLevel>('base');
-  
+
   const [secondsLeft, setSecondsLeft] = useState(70 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -415,9 +96,7 @@ export default function PracticePage() {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentProblem = useMemo(() => {
-    const found = problems.find((p) => p.id === selectedProblemId);
-    if (found) return found;
-    return problems[0] || DEFAULT_PROBLEMS[0];
+    return problems.find((p) => p.id === selectedProblemId) || problems[0] || DEFAULT_PROBLEMS[0];
   }, [problems, selectedProblemId]);
 
   const availableSubjects = useMemo(() => {
@@ -433,12 +112,10 @@ export default function PracticePage() {
   }, [problems]);
 
   const filteredProblems = useMemo(() => {
-    let list = problems;
-    if (selectedSubjectFilter !== 'ALL') {
-      list = problems.filter((p) => p.subject === selectedSubjectFilter);
-      if (currentProblem && !list.some((p) => p.id === currentProblem.id)) {
-        list = [currentProblem, ...list];
-      }
+    if (selectedSubjectFilter === 'ALL') return problems;
+    const list = problems.filter((p) => p.subject === selectedSubjectFilter);
+    if (currentProblem && !list.some((p) => p.id === currentProblem.id)) {
+      return [currentProblem, ...list];
     }
     return list;
   }, [problems, selectedSubjectFilter, currentProblem]);
@@ -453,11 +130,7 @@ export default function PracticePage() {
       if (admin) {
         setAdminQuery(`?admin=${encodeURIComponent(admin)}`);
         setAdminKey(admin);
-        if (admin === process.env.NEXT_PUBLIC_ADMIN_KEY) {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
+        setIsAdmin(admin === process.env.NEXT_PUBLIC_ADMIN_KEY);
       } else {
         setIsAdmin(false);
       }
@@ -467,19 +140,14 @@ export default function PracticePage() {
 
   useEffect(() => {
     if (activeTab !== 'statute') return;
-
     const timer = setTimeout(async () => {
       if (!statuteSearchQuery.trim() && statuteLawFilter === 'ALL') {
         setRemoteStatutes([]);
         return;
       }
-
       setIsSearchingStatutes(true);
       try {
-        const params = new URLSearchParams({
-          law: statuteLawFilter,
-          q: statuteSearchQuery.trim(),
-        });
+        const params = new URLSearchParams({ law: statuteLawFilter, q: statuteSearchQuery.trim() });
         const res = await fetch(`/api/statutes/search?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
@@ -491,15 +159,12 @@ export default function PracticePage() {
         setIsSearchingStatutes(false);
       }
     }, 350);
-
     return () => clearTimeout(timer);
   }, [activeTab, statuteSearchQuery, statuteLawFilter]);
 
   const changeFontSize = (level: FontSizeLevel) => {
     setFontSize(level);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('touan_font_size', level);
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('touan_font_size', level);
   };
 
   const initSessionAndSyncLatest = async () => {
@@ -513,19 +178,8 @@ export default function PracticePage() {
       }
       setProblems(allProblems);
 
-      const { data: latestSubmission } = await supabase
-        .from('submissions')
-        .select('problem_id, user_draft, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: latestDraft } = await supabase
-        .from('practice_drafts')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: latestSubmission } = await supabase.from('submissions').select('problem_id, user_draft, created_at').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      const { data: latestDraft } = await supabase.from('practice_drafts').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
 
       let candidateProbId = allProblems[0].id;
       let initialDraftText = '';
@@ -545,9 +199,7 @@ export default function PracticePage() {
         initialDraftText = latestSubmission.user_draft || '';
       } else {
         const savedProbId = typeof window !== 'undefined' ? localStorage.getItem('touan_active_problem_id') : null;
-        if (savedProbId && allProblems.some(p => p.id === savedProbId)) {
-          candidateProbId = savedProbId;
-        }
+        if (savedProbId && allProblems.some(p => p.id === savedProbId)) candidateProbId = savedProbId;
       }
 
       const matchedProb = allProblems.find(p => p.id === candidateProbId) || allProblems[0];
@@ -563,10 +215,7 @@ export default function PracticePage() {
 
   const switchProblem = async (targetId: string) => {
     setSelectedProblemId(targetId);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('touan_active_problem_id', targetId);
-    }
-
+    if (typeof window !== 'undefined') localStorage.setItem('touan_active_problem_id', targetId);
     try {
       const { data: draft } = await supabase.from('practice_drafts').select('*').eq('problem_id', targetId).maybeSingle();
       if (draft) {
@@ -621,11 +270,8 @@ export default function PracticePage() {
   const handleInsertDrillToDraft = () => {
     const drill = SUBJECT_DRILL_GUIDES[currentProblem.subject] || SUBJECT_DRILL_GUIDES['刑法'];
     const insertText = drillNotes.trim() ? drillNotes : drill.template;
-    if (userDraft.trim() && !window.confirm('答案欄の末尾にドリルの構成メモを挿入しますか？')) {
-      return;
-    }
-    const newDraft = userDraft ? `${userDraft}\n\n${insertText}` : insertText;
-    handleDraftChange(newDraft);
+    if (userDraft.trim() && !window.confirm('答案欄の末尾にドリルの構成メモを挿入しますか？')) return;
+    handleDraftChange(userDraft ? `${userDraft}\n\n${insertText}` : insertText);
     alert('ドリルの構成メモを答案作成欄に反映しました！');
   };
 
@@ -633,27 +279,16 @@ export default function PracticePage() {
     setSelectedSubjectFilter(newSubject);
     if (newSubject !== 'ALL') {
       const candidates = problems.filter((p) => p.subject === newSubject);
-      if (candidates.length > 0 && !candidates.some((p) => p.id === currentProblem.id)) {
-        switchProblem(candidates[0].id);
-      }
+      if (candidates.length > 0 && !candidates.some((p) => p.id === currentProblem.id)) switchProblem(candidates[0].id);
     }
-  };
-
-  const handleProblemChange = (newProblemId: string) => {
-    if (newProblemId === selectedProblemId) return;
-    switchProblem(newProblemId);
   };
 
   const handleCreateNewProblem = async () => {
-    if (!isAdmin) return;
-    if (!newTitle.trim() || !newFact.trim()) {
-      alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
-      return;
-    }
+    if (!isAdmin || !newTitle.trim() || !newFact.trim()) return;
     setIsSubmittingNewProblem(true);
     try {
       const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `prob-${Date.now()}`;
-      const newProblemData = {
+      const newProblemData: ProblemType = {
         id: newId,
         subject: newSubject,
         source_exam: '予備試験 論文式',
@@ -664,16 +299,13 @@ export default function PracticePage() {
         key_facts: [],
         statutes: []
       };
-
       const { error } = await supabase.from('problems').insert([newProblemData]);
       if (error) throw error;
-
       alert('新しい問題を登録しました！');
       setIsAddModalOpen(false);
       setNewTitle('');
       setNewFact('');
       setNewNorm('');
-      
       setProblems(prev => [newProblemData, ...prev]);
       switchProblem(newId);
     } catch (e: unknown) {
@@ -693,11 +325,7 @@ export default function PracticePage() {
   };
 
   const handleUpdateProblem = async () => {
-    if (!isAdmin) return;
-    if (!editTitle.trim() || !editFact.trim()) {
-      alert('論点名（タイトル）と問題文（事実・設問）を入力してください。');
-      return;
-    }
+    if (!isAdmin || !editTitle.trim() || !editFact.trim()) return;
     setIsUpdatingProblem(true);
     try {
       const updatedData = {
@@ -706,18 +334,9 @@ export default function PracticePage() {
         fact_context: editFact.trim(),
         standard_norm: editNorm.trim() || '【規範定立・採点基準】問題文の事実と条文要件を対比して法的三段論法を展開すること。',
       };
-
-      const { error } = await supabase
-        .from('problems')
-        .update(updatedData)
-        .eq('id', currentProblem.id);
-
+      const { error } = await supabase.from('problems').update(updatedData).eq('id', currentProblem.id);
       if (error) throw error;
-
-      setProblems((prev) =>
-        prev.map((p) => (p.id === currentProblem.id ? { ...p, ...updatedData } : p))
-      );
-
+      setProblems((prev) => prev.map((p) => (p.id === currentProblem.id ? { ...p, ...updatedData } : p)));
       alert('問題の内容を更新しました！');
       setIsEditModalOpen(false);
     } catch (err: unknown) {
@@ -728,26 +347,15 @@ export default function PracticePage() {
   };
 
   const handleDeleteCurrentProblem = async () => {
-    if (!isAdmin) return;
-    if (problems.length <= 1) {
-      alert('これ以上問題を削除できません。最低1問は保持する必要があります。');
-      return;
-    }
-
-    const isConfirmed = window.confirm(
-      `現在表示中の問題「[${currentProblem.subject}] ${currentProblem.target_issue}」を削除しますか？\n※この操作は取り消せません。`
-    );
-    if (!isConfirmed) return;
-
+    if (!isAdmin || problems.length <= 1) return;
+    if (!window.confirm(`現在表示中の問題「[${currentProblem.subject}] ${currentProblem.target_issue}」を削除しますか？`)) return;
     try {
       const { error } = await supabase.from('problems').delete().eq('id', currentProblem.id);
       if (error) throw error;
-
       alert('問題を削除しました。');
       const remaining = problems.filter((p) => p.id !== currentProblem.id);
       setProblems(remaining);
-      const nextProb = remaining[0] || DEFAULT_PROBLEMS[0];
-      switchProblem(nextProb.id);
+      switchProblem((remaining[0] || DEFAULT_PROBLEMS[0]).id);
     } catch (e: unknown) {
       alert(`問題削除エラー: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -774,19 +382,8 @@ export default function PracticePage() {
   };
 
   const handleSubmitEvaluation = async () => {
-    if (!isAdmin) {
-      alert('採点権限がありません。管理者URLからアクセスしてください。');
-      return;
-    }
-
-    if (!userDraft.trim()) {
-      alert('答案本文が空です。起案を入力してください。');
-      return;
-    }
-
-    if (!confirm('答案を提出し、Gemini AIによる考査委員基準採点（答案構成チェック・即死地雷判定を含む）を実行しますか？')) {
-      return;
-    }
+    if (!isAdmin || !userDraft.trim()) return;
+    if (!confirm('答案を提出し、Gemini AIによる考査委員基準採点を実行しますか？')) return;
 
     setIsEvaluating(true);
     setAiFeedback(null);
@@ -797,10 +394,7 @@ export default function PracticePage() {
     try {
       const res = await fetch('/api/evaluate-draft', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': adminKey,
-        },
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
         body: JSON.stringify({
           userDraft,
           drillNotes,
@@ -810,7 +404,6 @@ export default function PracticePage() {
           keyFacts: currentProblem.key_facts,
         }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '採点リクエストに失敗しました');
 
@@ -819,26 +412,18 @@ export default function PracticePage() {
       setAiFeedback(feedback);
       setLatestCost(cost);
 
-      const { error: insertError } = await supabase.from('submissions').insert([
-        {
-          problem_id: currentProblem.id,
-          user_draft: userDraft,
-          time_spent_seconds: timeSpent,
-          ai_feedback: feedback,
-          input_tokens: cost?.inputTokens ?? 0,
-          output_tokens: cost?.outputTokens ?? 0,
-          thoughts_tokens: cost?.thoughtsTokens ?? 0,
-          cost_usd: cost?.costUsd ?? 0,
-          cost_jpy: cost?.costJpy ?? 0,
-        },
-      ]);
-
-      if (insertError) {
-        console.error('答案履歴の保存エラー:', insertError);
-        alert(`講評は取得できましたが、履歴の保存に失敗しました。\n理由: ${insertError.message}`);
-      } else {
-        setSaveSuccessMsg('✅ 答案履歴（ダッシュボード）に正常にアーカイブ保存されました！');
-      }
+      const { error: insertError } = await supabase.from('submissions').insert([{
+        problem_id: currentProblem.id,
+        user_draft: userDraft,
+        time_spent_seconds: timeSpent,
+        ai_feedback: feedback,
+        input_tokens: cost?.inputTokens ?? 0,
+        output_tokens: cost?.outputTokens ?? 0,
+        thoughts_tokens: cost?.thoughtsTokens ?? 0,
+        cost_usd: cost?.costUsd ?? 0,
+        cost_jpy: cost?.costJpy ?? 0,
+      }]);
+      if (!insertError) setSaveSuccessMsg('✅ 答案履歴（ダッシュボード）に正常にアーカイブ保存されました！');
     } catch (err: unknown) {
       alert(`採点エラー: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -850,72 +435,27 @@ export default function PracticePage() {
 
   const normalizeQuery = (text?: string | null) => {
     if (!text) return '';
-    return String(text)
-      .toLowerCase()
-      .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
-      .replace(/[第条]/g, '')
-      .trim();
+    return String(text).toLowerCase().replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)).replace(/[第条]/g, '').trim();
   };
 
   return (
     <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      
-      {/* 起案ヘッダー */}
       <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
-        
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>⚖️</span>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
-            <select
-              value={selectedSubjectFilter}
-              onChange={(e) => handleSubjectChange(e.target.value)}
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                border: '1.5px solid #2563eb',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
-                cursor: 'pointer',
-                outline: 'none',
-              }}
-            >
+            <select value={selectedSubjectFilter} onChange={(e) => handleSubjectChange(e.target.value)} style={{ fontSize: '12px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', border: '1.5px solid #2563eb', backgroundColor: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', outline: 'none' }}>
               <option value="ALL">全科目 ({problems.length})</option>
-              {availableSubjects.map((sub) => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
+              {availableSubjects.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
             </select>
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
-            <select
-              value={selectedProblemId}
-              onChange={(e) => handleProblemChange(e.target.value)}
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                border: '1px solid #94a3b8',
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                cursor: 'pointer',
-                outline: 'none',
-                maxWidth: '280px'
-              }}
-            >
-              {filteredProblems.map((p) => (
-                <option key={p.id} value={p.id}>
-                  [{p.subject}] {p.target_issue}
-                </option>
-              ))}
+            <select value={selectedProblemId} onChange={(e) => { if (e.target.value !== selectedProblemId) switchProblem(e.target.value); }} style={{ fontSize: '12px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', border: '1px solid #94a3b8', backgroundColor: '#ffffff', color: '#0f172a', cursor: 'pointer', outline: 'none', maxWidth: '280px' }}>
+              {filteredProblems.map((p) => <option key={p.id} value={p.id}>[{p.subject}] {p.target_issue}</option>)}
             </select>
           </div>
-
           <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
             {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
           </span>
@@ -925,171 +465,35 @@ export default function PracticePage() {
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
             {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => changeFontSize(level)}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '4px',
-                  border: fontSize === level ? '1px solid #0284c7' : 'none',
-                  backgroundColor: fontSize === level ? '#0284c7' : 'transparent',
-                  color: fontSize === level ? '#ffffff' : '#475569',
-                  cursor: 'pointer',
-                }}
-              >
+              <button key={level} type="button" onClick={() => changeFontSize(level)} style={{ padding: '2px 6px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', border: fontSize === level ? '1px solid #0284c7' : 'none', backgroundColor: fontSize === level ? '#0284c7' : 'transparent', color: fontSize === level ? '#ffffff' : '#475569', cursor: 'pointer' }}>
                 {fontSizes[level].label}
               </button>
             ))}
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
-              ⏱ {formatTimer(secondsLeft)}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsTimerRunning(!isTimerRunning)}
-              style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                border: '1px solid #94a3b8',
-                backgroundColor: '#ffffff',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-              }}
-            >
+            <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>⏱ {formatTimer(secondsLeft)}</span>
+            <button type="button" onClick={() => setIsTimerRunning(!isTimerRunning)} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #94a3b8', backgroundColor: '#ffffff', cursor: 'pointer', fontWeight: 'bold' }}>
               {isTimerRunning ? '一時停止' : '開始'}
             </button>
           </div>
-
-          <Link href={`/dashboard${adminQuery}`} style={dashboardNavStyle}>
-            📊 答案履歴
-          </Link>
-
-          <Link href={`/weakness${adminQuery}`} style={weaknessNavStyle}>
-            🎯 弱点DB
-          </Link>
+          <Link href={`/dashboard${adminQuery}`} style={dashboardNavStyle}>📊 答案履歴</Link>
+          <Link href={`/weakness${adminQuery}`} style={weaknessNavStyle}>🎯 弱点DB</Link>
         </div>
       </header>
 
-      {/* 2ペインメイン作業エリア */}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 104px)', overflow: 'hidden' }}>
-        
-        {/* 左ペイン */}
         <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
             <div style={{ display: 'flex' }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab('problem')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent',
-                  color: activeTab === 'problem' ? '#0284c7' : '#64748b',
-                }}
-              >
-                📄 事実・設問
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('drill')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent',
-                  color: activeTab === 'drill' ? '#2563eb' : '#64748b',
-                }}
-              >
-                📝 全科目起案ドリル・構成
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('statute')}
-                style={{
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent',
-                  color: activeTab === 'statute' ? '#0284c7' : '#64748b',
-                }}
-              >
-                📖 電子六法
-              </button>
+              <button type="button" onClick={() => setActiveTab('problem')} style={{ padding: '10px 14px', fontSize: '12px', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer', borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'problem' ? '#0284c7' : '#64748b' }}>📄 事実・設問</button>
+              <button type="button" onClick={() => setActiveTab('drill')} style={{ padding: '10px 14px', fontSize: '12px', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer', borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent', color: activeTab === 'drill' ? '#2563eb' : '#64748b' }}>📝 全科目起案ドリル・構成</button>
+              <button type="button" onClick={() => setActiveTab('statute')} style={{ padding: '10px 14px', fontSize: '12px', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer', borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'statute' ? '#0284c7' : '#64748b' }}>📖 電子六法</button>
             </div>
-
             {isAdmin && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(true)}
-                  style={{
-                    padding: '4px 10px',
-                    backgroundColor: '#10b981',
-                    color: '#ffffff',
-                    fontSize: '11px',
-                    fontWeight: '900',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
-                  }}
-                  title="新しい演習問題を追加"
-                >
-                  ＋ 新規問題
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleOpenEditModal}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    color: '#1d4ed8',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
-                  title="現在選択中の問題を編集"
-                >
-                  ✏️ 編集
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDeleteCurrentProblem}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#fff1f2',
-                    border: '1px solid #fecdd3',
-                    color: '#be123c',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  title="現在選択中の問題を削除"
-                >
-                  🗑️ 削除
-                </button>
+                <button type="button" onClick={() => setIsAddModalOpen(true)} style={{ padding: '4px 10px', backgroundColor: '#10b981', color: '#ffffff', fontSize: '11px', fontWeight: '900', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>＋ 新規問題</button>
+                <button type="button" onClick={handleOpenEditModal} style={{ padding: '4px 8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer' }}>✏️ 編集</button>
+                <button type="button" onClick={handleDeleteCurrentProblem} style={{ padding: '4px 8px', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer' }}>🗑️ 削除</button>
               </div>
             )}
           </div>
@@ -1097,9 +501,7 @@ export default function PracticePage() {
           <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
             {activeTab === 'problem' && (
               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
-                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                  【{currentProblem.subject}】{currentProblem.target_issue}
-                </div>
+                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: '#1d4ed8' }}>【{currentProblem.subject}】{currentProblem.target_issue}</div>
                 {currentProblem.fact_context}
               </div>
             )}
@@ -1108,217 +510,80 @@ export default function PracticePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af' }}>
-                      ⚡️ {currentDrill.title}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleInsertDrillToDraft}
-                      style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#2563eb',
-                        color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      👉 答案欄に骨子を転送
-                    </button>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af' }}>⚡️ {currentDrill.title}</span>
+                    <button type="button" onClick={handleInsertDrillToDraft} style={{ padding: '4px 10px', backgroundColor: '#2563eb', color: '#ffffff', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>👉 答案欄に骨子を転送</button>
                   </div>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#3b82f6' }}>
-                    起案前の10分で即死地雷をチェックし、骨子を整理します。構成メモは答案提出時にAI講評で自動チェック・補完されます。
-                  </p>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#3b82f6' }}>起案前の10分で即死地雷をチェックし、骨子を整理します。</p>
                 </div>
-
                 <div style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#9f1239', marginBottom: '6px' }}>
-                    🚨 考査委員の即死地雷（致命的減点項目）
-                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#9f1239', marginBottom: '6px' }}>🚨 考査委員の即死地雷（致命的減点項目）</div>
                   <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', color: '#881337', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {currentDrill.fatalMistakes.map((mistake, idx) => (
-                      <li key={idx}>{mistake}</li>
-                    ))}
+                    {currentDrill.fatalMistakes.map((mistake, idx) => <li key={idx}>{mistake}</li>)}
                   </ul>
                 </div>
-
                 <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>
-                    📐 答案思考フレームワーク
-                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>📐 答案思考フレームワーク</div>
                   <div style={{ fontSize: '11px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {currentDrill.logicFramework.map((fw, idx) => (
-                      <div key={idx} style={{ padding: '2px 0' }}>{fw}</div>
-                    ))}
+                    {currentDrill.logicFramework.map((fw, idx) => <div key={idx}>{fw}</div>)}
                   </div>
                 </div>
-
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>
-                      ✍️ 答案構成・メモ欄（クラウド自動保存中）
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDrillNotesChange(currentDrill.template)}
-                      style={{ fontSize: '10px', color: '#2563eb', border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      標準テンプレを挿入
-                    </button>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>✍️ 答案構成・メモ欄（クラウド自動保存中）</span>
+                    <button type="button" onClick={() => handleDrillNotesChange(currentDrill.template)} style={{ fontSize: '10px', color: '#2563eb', border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}>標準テンプレを挿入</button>
                   </div>
-                  <textarea
-                    value={drillNotes}
-                    onChange={(e) => handleDrillNotesChange(e.target.value)}
-                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。&#10;※この内容は答案提出時にAI講評によって「思考フレームワーク・即死地雷」が自動判定・補完されます。"
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      padding: '10px',
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      outline: 'none',
-                      backgroundColor: '#ffffff',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <textarea value={drillNotes} onChange={(e) => handleDrillNotesChange(e.target.value)} placeholder="論点メモや構成順序をメモしてください。" style={{ width: '100%', height: '200px', padding: '10px', fontSize: '12px', fontFamily: 'monospace', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }} />
                 </div>
               </div>
             )}
 
             {activeTab === 'statute' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <form
-                  onSubmit={(e) => e.preventDefault()}
-                  style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}
-                >
+                <form onSubmit={(e) => e.preventDefault()} style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <input
-                      type="text"
-                      placeholder="全条文検索：条文番号または語句 (例: 108, 無権代理, 94条2項, 詐害行為)"
-                      value={statuteSearchQuery}
-                      onChange={(e) => setStatuteSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.preventDefault();
-                      }}
-                      style={{ flex: 1, padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
-                    />
-                    {statuteSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setStatuteSearchQuery('')}
-                        style={{ padding: '6px 10px', fontSize: '11px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                      >
-                        クリア
-                      </button>
-                    )}
+                    <input type="text" placeholder="全条文検索：条文番号または語句 (例: 108, 無権代理, 94条2項)" value={statuteSearchQuery} onChange={(e) => setStatuteSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} style={{ flex: 1, padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }} />
+                    {statuteSearchQuery && <button type="button" onClick={() => setStatuteSearchQuery('')} style={{ padding: '6px 10px', fontSize: '11px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>クリア</button>}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {['ALL', '憲法', '行政事件訴訟法', '民法', '商法', '会社法', '刑法', '刑事訴訟法', '民事訴訟法', '独占禁止法'].map((law) => (
-                      <button
-                        key={law}
-                        type="button"
-                        onClick={() => setStatuteLawFilter(law)}
-                        style={{
-                          padding: '3px 8px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          borderRadius: '4px',
-                          border: statuteLawFilter === law ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                          backgroundColor: statuteLawFilter === law ? '#0284c7' : '#ffffff',
-                          color: statuteLawFilter === law ? '#ffffff' : '#475569',
-                          cursor: 'pointer',
-                        }}
-                      >
+                      <button key={law} type="button" onClick={() => setStatuteLawFilter(law)} style={{ padding: '3px 8px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px', border: statuteLawFilter === law ? '1px solid #0284c7' : '1px solid #cbd5e1', backgroundColor: statuteLawFilter === law ? '#0284c7' : '#ffffff', color: statuteLawFilter === law ? '#ffffff' : '#475569', cursor: 'pointer' }}>
                         {law === '行政事件訴訟法' ? '行政法' : law}
                       </button>
                     ))}
                   </div>
                 </form>
 
-                {isSearchingStatutes && (
-                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#0284c7', fontWeight: 'bold', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
-                    ⏳ e-Gov法令データベースから全条文を検索中（初回のみ数秒かかります）...
-                  </div>
-                )}
+                {isSearchingStatutes && <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#0284c7', fontWeight: 'bold', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>⏳ e-Gov法令データベースから全条文を検索中...</div>}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(() => {
                     const localCombined = [
-                      ...(currentProblem.statutes || []).map(s => ({
-                        law: s.law || currentProblem.subject || '',
-                        num: s.num || '',
-                        title: s.title || '',
-                        text: s.text || ''
-                      })),
+                      ...(currentProblem.statutes || []).map(s => ({ law: s.law || currentProblem.subject || '', num: s.num || '', title: s.title || '', text: s.text || '' })),
                       ...MASTER_STATUTES
                     ];
-
                     const qRaw = (statuteSearchQuery || '').trim();
                     const qNorm = normalizeQuery(qRaw);
-
                     const localFiltered = localCombined.filter(item => {
-                      const itemLaw = item.law || '';
-                      const matchLaw =
-                        statuteLawFilter === 'ALL' ||
-                        itemLaw.includes(statuteLawFilter) ||
-                        (statuteLawFilter === '商法' && itemLaw === '会社法');
-
+                      const matchLaw = statuteLawFilter === 'ALL' || item.law.includes(statuteLawFilter) || (statuteLawFilter === '商法' && item.law === '会社法');
                       if (!qRaw) return matchLaw;
-
-                      const itemNumNorm = normalizeQuery(item.num || '');
-                      const itemTitleNorm = (item.title || '').toLowerCase();
-                      const itemTextNorm = (item.text || '').toLowerCase();
-
-                      return (
-                        matchLaw &&
-                        ((itemNumNorm.length > 0 && itemNumNorm.includes(qNorm)) ||
-                          itemTitleNorm.includes(qRaw.toLowerCase()) ||
-                          itemTextNorm.includes(qRaw.toLowerCase()))
-                      );
+                      return matchLaw && (normalizeQuery(item.num).includes(qNorm) || item.title.toLowerCase().includes(qRaw.toLowerCase()) || item.text.toLowerCase().includes(qRaw.toLowerCase()));
                     });
-
                     const mergedMap = new Map<string, { law: string; num: string; title: string; text: string }>();
                     for (const item of [...remoteStatutes, ...localFiltered]) {
                       const key = `${item.law}-${item.num}`;
-                      if (!mergedMap.has(key)) {
-                        mergedMap.set(key, item);
-                      }
+                      if (!mergedMap.has(key)) mergedMap.set(key, item);
                     }
-
                     const finalResults = Array.from(mergedMap.values());
-
                     if (!isSearchingStatutes && finalResults.length === 0) {
-                      return (
-                        <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>
-                          該当する条文が見つかりませんでした。別の条文番号（例: 108, 113, 177）やキーワードでお試しください。
-                        </div>
-                      );
+                      return <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>該当する条文が見つかりませんでした。</div>;
                     }
-
                     return finalResults.map((st, idx) => (
                       <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8' }}>
-                            {st.law} {st.num} {st.title}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(`【${st.law} ${st.num} ${st.title}】\n${st.text}\n`);
-                              alert(`${st.law} ${st.num} をコピーしました`);
-                            }}
-                            style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                          >
-                            📋 引用コピー
-                          </button>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8' }}>{st.law} {st.num} {st.title}</span>
+                          <button type="button" onClick={() => { navigator.clipboard.writeText(`【${st.law} ${st.num} ${st.title}】\n${st.text}\n`); alert(`${st.law} ${st.num} をコピーしました`); }} style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>📋 引用コピー</button>
                         </div>
-                        <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>
-                          {st.text}
-                        </p>
+                        <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>{st.text}</p>
                       </div>
                     ));
                   })()}
@@ -1328,271 +593,115 @@ export default function PracticePage() {
           </div>
         </section>
 
-        {/* 右ペイン */}
         <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
           <div style={{ height: '40px', padding: '0 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>✍️ 答案作成欄</span>
-              <span style={{ fontSize: '11px', color: '#64748b' }}>
-                文字数: <strong style={{ color: '#0f172a' }}>{userDraft.length}</strong> 字（約 {(userDraft.length / 690).toFixed(1)} 頁）
-              </span>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>文字数: <strong style={{ color: '#0f172a' }}>{userDraft.length}</strong> 字（約 {(userDraft.length / 690).toFixed(1)} 頁）</span>
             </div>
-
             {isAdmin && (
-              <button
-                type="button"
-                onClick={handleSubmitEvaluation}
-                disabled={isEvaluating}
-                style={{
-                  backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
-                  color: '#ffffff',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  cursor: isEvaluating ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
+              <button type="button" onClick={handleSubmitEvaluation} disabled={isEvaluating} style={{ backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: 'none', cursor: isEvaluating ? 'not-allowed' : 'pointer' }}>
+                {isEvaluating ? '⏳ 採点・講評中...' : '🚀 答案提出・AI厳格採点'}
               </button>
             )}
           </div>
 
           <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex', overflow: 'hidden' }}>
-            <textarea
-              ref={textareaRef}
-              value={userDraft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              placeholder={`【${currentProblem.target_issue}】の答案を作成してください。`}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '14px',
-                fontSize: fontSizes[fontSize].text,
-                lineHeight: fontSizes[fontSize].lh,
-                fontFamily: 'serif',
-                resize: 'none',
-                outline: 'none',
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                boxSizing: 'border-box',
-              }}
-            />
+            <textarea ref={textareaRef} value={userDraft} onChange={(e) => handleDraftChange(e.target.value)} placeholder={`【${currentProblem.target_issue}】の答案を作成してください。`} style={{ width: '100%', height: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, fontFamily: 'serif', resize: 'none', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a', boxSizing: 'border-box' }} />
           </div>
 
           {aiFeedback && (
             <div style={{ flex: '1', borderTop: '2px solid #cbd5e1', backgroundColor: '#fffdf5', padding: '14px', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#854d0e' }}>
-                  ⚖️ 考査委員採点講評（答案構成チェック・即死地雷判定を含む）
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAiFeedback(null)}
-                  style={{ fontSize: '10px', color: '#854d0e', border: '1px solid #fde047', backgroundColor: '#fef9c3', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                  閉じる
-                </button>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#854d0e' }}>⚖️ 考査委員採点講評</span>
+                <button type="button" onClick={() => setAiFeedback(null)} style={{ fontSize: '10px', color: '#854d0e', border: '1px solid #fde047', backgroundColor: '#fef9c3', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}>閉じる</button>
               </div>
-
-              {saveSuccessMsg && (
-                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
-                  {saveSuccessMsg}
-                </div>
-              )}
-
+              {saveSuccessMsg && <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>{saveSuccessMsg}</div>}
               {latestCost && (
                 <div style={{ padding: '6px 12px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155', fontSize: '11px', marginBottom: '10px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                    💴 今回の採点コスト: 約 {latestCost.costJpy.toFixed(2)} 円（${latestCost.costUsd.toFixed(4)}）
-                  </span>
-                  <span>
-                    入力: {latestCost.inputTokens.toLocaleString()} / 出力: {latestCost.outputTokens.toLocaleString()} / 思考: {latestCost.thoughtsTokens.toLocaleString()} tokens
-                  </span>
+                  <span style={{ fontWeight: 'bold', color: '#0f172a' }}>💴 採点コスト: 約 {latestCost.costJpy.toFixed(2)} 円（${latestCost.costUsd.toFixed(4)}）</span>
+                  <span>入力: {latestCost.inputTokens.toLocaleString()} / 出力: {latestCost.outputTokens.toLocaleString()} / 思考: {latestCost.thoughtsTokens.toLocaleString()} tokens</span>
                 </div>
               )}
-
-              <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
-                {aiFeedback}
-              </div>
+              <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#1e293b', whiteSpace: 'pre-wrap' }}>{aiFeedback}</div>
             </div>
           )}
         </section>
-
       </div>
 
-      {/* 新規問題追加モーダル */}
       {isAdmin && isAddModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
-                ➕ 新しい演習問題を追加登録
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
-              >
-                ✕
-              </button>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>➕ 新しい演習問題を追加登録</h3>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: '0 0 140px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
-                  <select
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
-                  >
-                    {SUBJECT_ORDER.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                  <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+                    {SUBJECT_ORDER.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="例: 不動産二重譲渡と横領・客体の錯誤"
-                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
                 </div>
               </div>
-
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
-                <textarea
-                  value={newFact}
-                  onChange={(e) => setNewFact(e.target.value)}
-                  placeholder="【事実】&#10;1. 甲は...&#10;&#10;【設問】&#10;甲の罪責を論ぜよ。"
-                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={newFact} onChange={(e) => setNewFact(e.target.value)} style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
               </div>
-
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
-                <textarea
-                  value={newNorm}
-                  onChange={(e) => setNewNorm(e.target.value)}
-                  placeholder="AI採点時に参照する判例規範や当てはめ基準があれば入力してください。"
-                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={newNorm} onChange={(e) => setNewNorm(e.target.value)} style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
               </div>
             </div>
-
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateNewProblem}
-                disabled={isSubmittingNewProblem}
-                style={{ padding: '6px 18px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSubmittingNewProblem ? 'not-allowed' : 'pointer' }}
-              >
-                {isSubmittingNewProblem ? '保存中...' : '登録して起案を開始'}
-              </button>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>キャンセル</button>
+              <button type="button" onClick={handleCreateNewProblem} disabled={isSubmittingNewProblem} style={{ padding: '6px 18px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{isSubmittingNewProblem ? '保存中...' : '登録して起案を開始'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 問題編集モーダル */}
       {isAdmin && isEditModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
-                ✏️ 演習問題を編集
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
-              >
-                ✕
-              </button>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>✏️ 演習問題を編集</h3>
+              <button type="button" onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: '0 0 140px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
-                  <select
-                    value={editSubject}
-                    onChange={(e) => setEditSubject(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
-                  >
-                    {SUBJECT_ORDER.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                  <select value={editSubject} onChange={(e) => setEditSubject(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+                    {SUBJECT_ORDER.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
                 </div>
               </div>
-
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
-                <textarea
-                  value={editFact}
-                  onChange={(e) => setEditFact(e.target.value)}
-                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={editFact} onChange={(e) => setEditFact(e.target.value)} style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
               </div>
-
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
-                <textarea
-                  value={editNorm}
-                  onChange={(e) => setEditNorm(e.target.value)}
-                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={editNorm} onChange={(e) => setEditNorm(e.target.value)} style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }} />
               </div>
             </div>
-
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={handleUpdateProblem}
-                disabled={isUpdatingProblem}
-                style={{ padding: '6px 18px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isUpdatingProblem ? 'not-allowed' : 'pointer' }}
-              >
-                {isUpdatingProblem ? '更新中...' : '上書き保存'}
-              </button>
+              <button type="button" onClick={() => setIsEditModalOpen(false)} style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>キャンセル</button>
+              <button type="button" onClick={handleUpdateProblem} disabled={isUpdatingProblem} style={{ padding: '6px 18px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{isUpdatingProblem ? '更新中...' : '上書き保存'}</button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
