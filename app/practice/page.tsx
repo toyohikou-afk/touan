@@ -1421,3 +1421,743 @@ export default function PracticePage() {
               {saveSuccessMsg && (
                 <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
                   {
+return (
+    <div style={{ height: 'calc(100vh - 56px)', backgroundColor: '#f1f5f9', color: '#0f172a', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', overflow: 'hidden' }}>
+      
+      {/* 起案ヘッダー */}
+      <header style={{ height: '48px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', flexShrink: 0 }}>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>⚖️</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>科目:</span>
+            <select
+              value={selectedSubjectFilter}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1.5px solid #2563eb',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="ALL">全科目 ({problems.length})</option>
+              {availableSubjects.map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>問題:</span>
+            <select
+              value={selectedProblemId}
+              onChange={(e) => handleProblemChange(e.target.value)}
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid #94a3b8',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                cursor: 'pointer',
+                outline: 'none',
+                maxWidth: '280px'
+              }}
+            >
+              {filteredProblems.map((p) => (
+                <option key={p.id} value={p.id}>
+                  [{p.subject}] {p.target_issue}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: syncStatus === 'synced' ? '#dcfce7' : syncStatus === 'saving' ? '#fef9c3' : '#fee2e2', color: syncStatus === 'synced' ? '#166534' : syncStatus === 'saving' ? '#854d0e' : '#991b1b', fontWeight: 'bold' }}>
+            {syncStatus === 'synced' ? '☁️ 保存済' : '⏳ 保存中'}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 4px', gap: '2px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#475569', marginRight: '3px' }}>🔍</span>
+            {(['sm', 'base', 'lg', 'xl'] as FontSizeLevel[]).map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => changeFontSize(level)}
+                style={{
+                  padding: '2px 6px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  borderRadius: '4px',
+                  border: fontSize === level ? '1px solid #0284c7' : 'none',
+                  backgroundColor: fontSize === level ? '#0284c7' : 'transparent',
+                  color: fontSize === level ? '#ffffff' : '#475569',
+                  cursor: 'pointer',
+                }}
+              >
+                {fontSizes[level].label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'monospace', color: secondsLeft < 600 ? '#dc2626' : '#0f172a' }}>
+              ⏱ {formatTimer(secondsLeft)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsTimerRunning(!isTimerRunning)}
+              style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                border: '1px solid #94a3b8',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+              }}
+            >
+              {isTimerRunning ? '一時停止' : '開始'}
+            </button>
+          </div>
+
+          <Link href={`/dashboard${adminQuery}`} style={dashboardNavStyle}>
+            📊 答案履歴
+          </Link>
+
+          <Link href={`/weakness${adminQuery}`} style={weaknessNavStyle}>
+            🎯 弱点DB
+          </Link>
+        </div>
+      </header>
+
+      {/* 2ペインメイン作業エリア */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'minmax(420px, 48%) minmax(440px, 52%)', height: 'calc(100vh - 104px)', overflow: 'hidden' }}>
+        
+        {/* 左ペイン */}
+        <section style={{ backgroundColor: '#ffffff', borderRight: '2px solid #cbd5e1', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '0 8px', flexShrink: 0 }}>
+            <div style={{ display: 'flex' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('problem')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'problem' ? '3px solid #0284c7' : '3px solid transparent',
+                  color: activeTab === 'problem' ? '#0284c7' : '#64748b',
+                }}
+              >
+                📄 事実・設問
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('drill')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'drill' ? '3px solid #2563eb' : '3px solid transparent',
+                  color: activeTab === 'drill' ? '#2563eb' : '#64748b',
+                }}
+              >
+                📝 全科目起案ドリル・構成
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('statute')}
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'statute' ? '3px solid #0284c7' : '3px solid transparent',
+                  color: activeTab === 'statute' ? '#0284c7' : '#64748b',
+                }}
+              >
+                📖 電子六法
+              </button>
+            </div>
+
+            {/* 管理者のみ表示：追加・編集・削除ボタン */}
+            {isAdmin && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  style={{
+                    padding: '4px 10px',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(16,185,129,0.3)',
+                  }}
+                  title="新しい演習問題を追加"
+                >
+                  ＋ 新規問題
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenEditModal}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                  title="現在選択中の問題を編集"
+                >
+                  ✏️ 編集
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentProblem}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#fff1f2',
+                    border: '1px solid #fecdd3',
+                    color: '#be123c',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                  title="現在選択中の問題を削除"
+                >
+                  🗑️ 削除
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh }}>
+            {activeTab === 'problem' && (
+              <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#1e293b' }}>
+                <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                  【{currentProblem.subject}】{currentProblem.target_issue}
+                </div>
+                {currentProblem.fact_context}
+              </div>
+            )}
+
+            {activeTab === 'drill' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af' }}>
+                      ⚡️ {currentDrill.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleInsertDrillToDraft}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      👉 答案欄に骨子を転送
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#3b82f6' }}>
+                    起案前の10分で即死地雷をチェックし、骨子を整理します。構成メモは答案提出時にAI講評で自動チェック・補完されます。
+                  </p>
+                </div>
+
+                <div style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#9f1239', marginBottom: '6px' }}>
+                    🚨 考査委員の即死地雷（致命的減点項目）
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', color: '#881337', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {currentDrill.fatalMistakes.map((mistake, idx) => (
+                      <li key={idx}>{mistake}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', marginBottom: '6px' }}>
+                    📐 答案思考フレームワーク
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {currentDrill.logicFramework.map((fw, idx) => (
+                      <div key={idx} style={{ padding: '2px 0' }}>{fw}</div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0f172a' }}>
+                      ✍️ 答案構成・メモ欄（クラウド自動保存中）
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDrillNotesChange(currentDrill.template)}
+                      style={{ fontSize: '10px', color: '#2563eb', border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      標準テンプレを挿入
+                    </button>
+                  </div>
+                  <textarea
+                    value={drillNotes}
+                    onChange={(e) => handleDrillNotesChange(e.target.value)}
+                    placeholder="ここに論点メモ、拾うべき生事実、構成順序をメモしてください。&#10;※この内容は答案提出時にAI講評によって「思考フレームワーク・即死地雷」が自動判定・補完されます。"
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      padding: '10px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'statute' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="全条文検索：条文番号または語句 (例: 108, 無権代理, 94条2項, 詐害行為)"
+                      value={statuteSearchQuery}
+                      onChange={(e) => setStatuteSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.preventDefault();
+                      }}
+                      style={{ flex: 1, padding: '8px 10px', fontSize: '13px', border: '1.5px solid #0284c7', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
+                    />
+                    {statuteSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setStatuteSearchQuery('')}
+                        style={{ padding: '6px 10px', fontSize: '11px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        クリア
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {['ALL', '憲法', '行政事件訴訟法', '民法', '商法', '会社法', '刑法', '刑事訴訟法', '民事訴訟法', '独占禁止法'].map((law) => (
+                      <button
+                        key={law}
+                        type="button"
+                        onClick={() => setStatuteLawFilter(law)}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          borderRadius: '4px',
+                          border: statuteLawFilter === law ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                          backgroundColor: statuteLawFilter === law ? '#0284c7' : '#ffffff',
+                          color: statuteLawFilter === law ? '#ffffff' : '#475569',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {law === '行政事件訴訟法' ? '行政法' : law}
+                      </button>
+                    ))}
+                  </div>
+                </form>
+
+                {isSearchingStatutes && (
+                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#0284c7', fontWeight: 'bold', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
+                    ⏳ e-Gov法令データベースから全条文を検索中（初回のみ数秒かかります）...
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {(() => {
+                    const localCombined = [
+                      ...(currentProblem.statutes || []).map(s => ({
+                        law: s.law || currentProblem.subject || '',
+                        num: s.num || '',
+                        title: s.title || '',
+                        text: s.text || ''
+                      })),
+                      ...MASTER_STATUTES
+                    ];
+
+                    const qRaw = (statuteSearchQuery || '').trim();
+                    const qNorm = normalizeQuery(qRaw);
+
+                    const localFiltered = localCombined.filter(item => {
+                      const itemLaw = item.law || '';
+                      const matchLaw =
+                        statuteLawFilter === 'ALL' ||
+                        itemLaw.includes(statuteLawFilter) ||
+                        (statuteLawFilter === '商法' && itemLaw === '会社法');
+
+                      if (!qRaw) return matchLaw;
+
+                      const itemNumNorm = normalizeQuery(item.num || '');
+                      const itemTitleNorm = (item.title || '').toLowerCase();
+                      const itemTextNorm = (item.text || '').toLowerCase();
+
+                      return (
+                        matchLaw &&
+                        ((itemNumNorm.length > 0 && itemNumNorm.includes(qNorm)) ||
+                          itemTitleNorm.includes(qRaw.toLowerCase()) ||
+                          itemTextNorm.includes(qRaw.toLowerCase()))
+                      );
+                    });
+
+                    const mergedMap = new Map<string, { law: string; num: string; title: string; text: string }>();
+                    for (const item of [...remoteStatutes, ...localFiltered]) {
+                      const key = `${item.law}-${item.num}`;
+                      if (!mergedMap.has(key)) {
+                        mergedMap.set(key, item);
+                      }
+                    }
+
+                    const finalResults = Array.from(mergedMap.values());
+
+                    if (!isSearchingStatutes && finalResults.length === 0) {
+                      return (
+                        <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '12px' }}>
+                          該当する条文が見つかりませんでした。別の条文番号（例: 108, 113, 177）やキーワードでお試しください。
+                        </div>
+                      );
+                    }
+
+                    return finalResults.map((st, idx) => (
+                      <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8' }}>
+                            {st.law} {st.num} {st.title}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`【${st.law} ${st.num} ${st.title}】\n${st.text}\n`);
+                              alert(`${st.law} ${st.num} をコピーしました`);
+                            }}
+                            style={{ fontSize: '10px', color: '#0284c7', border: '1px solid #bae6fd', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            📋 引用コピー
+                          </button>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>
+                          {st.text}
+                        </p>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 右ペイン */}
+        <section style={{ backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div style={{ height: '40px', padding: '0 16px', backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>✍️ 答案作成欄</span>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>
+                文字数: <strong style={{ color: '#0f172a' }}>{userDraft.length}</strong> 字（約 {(userDraft.length / 690).toFixed(1)} 頁）
+              </span>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleSubmitEvaluation}
+                disabled={isEvaluating}
+                style={{
+                  backgroundColor: isEvaluating ? '#94a3b8' : '#2563eb',
+                  color: '#ffffff',
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: isEvaluating ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isEvaluating ? '⏳ 考査委員が採点・講評中...' : '🚀 答案提出・AI厳格採点（構成補完）'}
+              </button>
+            )}
+          </div>
+
+          <div style={{ flex: aiFeedback ? '0 0 45%' : '1', padding: '10px', boxSizing: 'border-box', display: 'flex', overflow: 'hidden' }}>
+            <textarea
+              ref={textareaRef}
+              value={userDraft}
+              onChange={(e) => handleDraftChange(e.target.value)}
+              placeholder={`【${currentProblem.target_issue}】の答案を作成してください。`}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '14px',
+                fontSize: fontSizes[fontSize].text,
+                lineHeight: fontSizes[fontSize].lh,
+                fontFamily: 'serif',
+                resize: 'none',
+                outline: 'none',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {aiFeedback && (
+            <div style={{ flex: '1', borderTop: '2px solid #cbd5e1', backgroundColor: '#fffdf5', padding: '14px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#854d0e' }}>
+                  ⚖️ 考査委員採点講評（答案構成チェック・即死地雷判定を含む）
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAiFeedback(null)}
+                  style={{ fontSize: '10px', color: '#854d0e', border: '1px solid #fde047', backgroundColor: '#fef9c3', padding: '1px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  閉じる
+                </button>
+              </div>
+
+              {saveSuccessMsg && (
+                <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '6px', color: '#15803d', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
+                  {saveSuccessMsg}
+                </div>
+              )}
+
+              {latestCost && (
+                <div style={{ padding: '6px 12px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155', fontSize: '11px', marginBottom: '10px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                    💴 今回の採点コスト: 約 {latestCost.costJpy.toFixed(2)} 円（${latestCost.costUsd.toFixed(4)}）
+                  </span>
+                  <span>
+                    入力: {latestCost.inputTokens.toLocaleString()} / 出力: {latestCost.outputTokens.toLocaleString()} / 思考: {latestCost.thoughtsTokens.toLocaleString()} tokens
+                  </span>
+                </div>
+              )}
+
+              <div style={{ fontSize: fontSizes[fontSize].text, lineHeight: fontSizes[fontSize].lh, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
+                {aiFeedback}
+              </div>
+            </div>
+          )}
+        </section>
+
+      </div>
+
+      {/* 新規問題追加モーダル */}
+      {isAdmin && isAddModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ➕ 新しい演習問題を追加登録
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 140px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_ORDER.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="例: 不動産二重譲渡と横領・客体の錯誤"
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
+                <textarea
+                  value={newFact}
+                  onChange={(e) => setNewFact(e.target.value)}
+                  placeholder="【事実】&#10;1. 甲は...&#10;&#10;【設問】&#10;甲の罪責を論ぜよ。"
+                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
+                <textarea
+                  value={newNorm}
+                  onChange={(e) => setNewNorm(e.target.value)}
+                  placeholder="AI採点時に参照する判例規範や当てはめ基準があれば入力してください。"
+                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateNewProblem}
+                disabled={isSubmittingNewProblem}
+                style={{ padding: '6px 18px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isSubmittingNewProblem ? 'not-allowed' : 'pointer' }}
+              >
+                {isSubmittingNewProblem ? '保存中...' : '登録して起案を開始'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 問題編集モーダル */}
+      {isAdmin && isEditModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+                ✏️ 演習問題を編集
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: '0 0 140px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>科目</label>
+                  <select
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  >
+                    {SUBJECT_ORDER.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>論点名・問題タイトル *</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>問題文（事実・設問） *</label>
+                <textarea
+                  value={editFact}
+                  onChange={(e) => setEditFact(e.target.value)}
+                  style={{ width: '100%', height: '180px', padding: '10px', fontSize: '12px', fontFamily: 'serif', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>出題趣旨・判例の規範定立（任意）</label>
+                <textarea
+                  value={editNorm}
+                  onChange={(e) => setEditNorm(e.target.value)}
+                  style={{ width: '100%', height: '80px', padding: '8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateProblem}
+                disabled={isUpdatingProblem}
+                style={{ padding: '6px 18px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: isUpdatingProblem ? 'not-allowed' : 'pointer' }}
+              >
+                {isUpdatingProblem ? '更新中...' : '上書き保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
