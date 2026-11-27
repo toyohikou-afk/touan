@@ -23,7 +23,7 @@ export default function TantouDrillPage() {
   const [totalAttempts, setTotalAttempts] = useState<number>(0);
   const [correctAttempts, setCorrectAttempts] = useState<number>(0);
 
-  // UI・同期ステータス用ステート
+  // UI用ステート
   const [fontSizeScale, setFontSizeScale] = useState<number>(100);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
   const [lastSyncedAt, setLastSyncedAt] = useState<string>('');
@@ -71,7 +71,7 @@ export default function TantouDrillPage() {
     }
   }, [selectedSubject, onlyMistake, question, mistakeIds, totalAttempts, correctAttempts, fontSizeScale]);
 
-  // === 指定IDの問題を取得する処理 ===
+  // === 指定IDの問題を取得 ===
   const fetchQuestionById = useCallback(async (id: number) => {
     setLoading(true);
     setIsAnswered(false);
@@ -92,7 +92,7 @@ export default function TantouDrillPage() {
     return false;
   }, []);
 
-  // === 条件に合う問題をランダムに1問取得する処理 ===
+  // === 1問ランダムに取得する処理 ===
   const fetchRandomQuestion = useCallback(async (overrideSubject?: string, overrideOnlyMistake?: boolean, overrideMistakeIds?: number[]) => {
     setLoading(true);
     setIsAnswered(false);
@@ -132,7 +132,6 @@ export default function TantouDrillPage() {
         return;
       }
 
-      // 通常モード：件数を取得してランダム抽出
       let countQuery = supabase
         .from('tantou_questions')
         .select('*', { count: 'exact', head: true })
@@ -177,7 +176,7 @@ export default function TantouDrillPage() {
     }
   }, [selectedSubject, onlyMistake, mistakeIds, saveSyncStateToCloud]);
 
-  // === Supabaseから最新状態を復元する処理 ===
+  // === Supabaseから最新状態を復元 ===
   const pullSyncStateFromCloud = useCallback(async (showAlert = false) => {
     setSyncStatus('syncing');
     try {
@@ -205,7 +204,6 @@ export default function TantouDrillPage() {
         setSelectedSubject(nextSubj);
         setOnlyMistake(nextMistakeMode);
 
-        // クラウド上に保存された問題IDがあり、現在の問題と異なる場合はその問題を表示
         if (data.current_question_id && data.current_question_id !== currentQuestionIdRef.current) {
           const restored = await fetchQuestionById(data.current_question_id);
           if (!restored) {
@@ -233,7 +231,6 @@ export default function TantouDrillPage() {
     }
   }, [fetchQuestionById, fetchRandomQuestion]);
 
-  // 科目一覧の取得と初回同期
   useEffect(() => {
     const loadSubjects = async () => {
       const { data } = await supabase
@@ -249,7 +246,6 @@ export default function TantouDrillPage() {
     pullSyncStateFromCloud(false);
   }, []);
 
-  // スマホ・別タブへの切り替え復帰時に自動同期
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -350,6 +346,7 @@ export default function TantouDrillPage() {
     return 'text-base';
   };
 
+  // テンキーのボタン数を問題文から判定するロジック
   let maxButtons = 8;
   let isTwoBtns = false;
   if (question) {
@@ -367,39 +364,49 @@ export default function TantouDrillPage() {
   const isMarkedMistake = question ? mistakeIds.includes(question.id) : false;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 py-8 font-sans">
-      <div className="max-w-3xl mx-auto px-4">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', padding: '32px 16px', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '768px', margin: '0 auto' }}>
         
-        {/* ヘッダー＆ナビゲーション */}
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-5 border-b-2 border-slate-200 pb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">📝 短答ドリル演習（同期対応）</h1>
+        {/* ヘッダー＆文字サイズコントロール（元のレイアウト構成を復元） */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>📝 短答過去問 ドリルモード</h1>
             <button
               type="button"
               onClick={() => pullSyncStateFromCloud(true)}
               title="クリックでPC・スマホ間の最新状態を即時同期"
-              className={`px-2.5 py-1 rounded-full text-xs font-bold border cursor-pointer ${
-                syncStatus === 'synced'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                  : syncStatus === 'syncing'
-                  ? 'bg-amber-50 text-amber-700 border-amber-300'
-                  : 'bg-red-50 text-red-700 border-red-300'
-              }`}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                border: syncStatus === 'synced' ? '1px solid #6ee7b7' : syncStatus === 'syncing' ? '1px solid #fcd34d' : '1px solid #fca5a5',
+                backgroundColor: syncStatus === 'synced' ? '#ecfdf5' : syncStatus === 'syncing' ? '#fffbeb' : '#fef2f2',
+                color: syncStatus === 'synced' ? '#047857' : syncStatus === 'syncing' ? '#b45309' : '#b91c1c',
+              }}
             >
               {syncStatus === 'synced' ? `☁️ 同期済 ${lastSyncedAt}` : syncStatus === 'syncing' ? '⏳ 同期中...' : '⚠️ 同期エラー'}
             </button>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-lg shadow-sm border border-slate-200">
-              <span className="text-xs font-bold text-slate-600">文字:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ffffff', padding: '6px 12px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>文字サイズ:</span>
               {[100, 125, 150].map((scale) => (
                 <button
                   key={scale}
                   onClick={() => handleScaleChange(scale)}
-                  className={`px-2 py-0.5 text-xs font-bold rounded ${
-                    fontSizeScale === scale ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: fontSizeScale === scale ? '#2563eb' : '#f1f5f9',
+                    color: fontSizeScale === scale ? '#ffffff' : '#334155',
+                  }}
                 >
                   {scale === 100 ? '標準' : `${scale}%`}
                 </button>
@@ -408,20 +415,28 @@ export default function TantouDrillPage() {
 
             <Link
               href="/"
-              className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors"
+              style={{
+                padding: '7px 12px',
+                backgroundColor: '#1e293b',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                textDecoration: 'none',
+              }}
             >
-              ← トップへ戻る
+              ← トップへ
             </Link>
           </div>
         </div>
 
-        {/* フィルター＆同期スコアバー */}
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
+        {/* フィルター＆同期スコアバー（コンパクト1行配置） */}
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <select
               value={selectedSubject}
               onChange={(e) => handleSubjectChange(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-blue-500 text-sm font-bold text-slate-800 bg-white cursor-pointer"
+              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563eb', fontSize: '13px', fontWeight: 'bold', color: '#1e293b', backgroundColor: '#ffffff', cursor: 'pointer' }}
             >
               <option value="ALL">📚 すべての科目</option>
               {subjects.map((s) => (
@@ -429,7 +444,7 @@ export default function TantouDrillPage() {
               ))}
             </select>
 
-            <label className={`flex items-center gap-1.5 text-sm font-bold cursor-pointer px-2.5 py-1 rounded-lg ${onlyMistake ? 'bg-amber-100 text-red-700 border border-amber-300' : 'text-red-600'}`}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', padding: '4px 10px', borderRadius: '8px', backgroundColor: onlyMistake ? '#fef3c7' : 'transparent', color: '#dc2626', border: onlyMistake ? '1px solid #fcd34d' : '1px solid transparent' }}>
               <input
                 type="checkbox"
                 checked={onlyMistake}
@@ -439,15 +454,15 @@ export default function TantouDrillPage() {
             </label>
           </div>
 
-          <div className="flex items-center gap-3 text-xs sm:text-sm font-bold text-slate-700">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 'bold', color: '#334155' }}>
             <span>
-              📊 成績: <span className="text-emerald-600 text-base">{correctAttempts}</span> / {totalAttempts}
+              📊 成績: <span style={{ color: '#059669', fontSize: '16px' }}>{correctAttempts}</span> / {totalAttempts}
               {totalAttempts > 0 && ` (${Math.round((correctAttempts / totalAttempts) * 100)}%)`}
             </span>
             {(totalAttempts > 0 || mistakeIds.length > 0) && (
               <button
                 onClick={handleResetProgress}
-                className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded border border-slate-300"
+                style={{ padding: '4px 8px', fontSize: '11px', backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 'bold' }}
               >
                 リセット
               </button>
@@ -456,94 +471,99 @@ export default function TantouDrillPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-slate-500 font-bold">問題を読み込んでいます...</div>
+          <div style={{ textAlign: 'center', padding: '80px 0', color: '#64748b', fontWeight: 'bold' }}>問題を読み込んでいます...</div>
         ) : !question ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-lg font-bold text-slate-700 mb-4">
+          <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#334155', marginBottom: '16px' }}>
               {onlyMistake ? '現在、間違えた問題（復習対象）はありません！🎉' : '条件に一致する問題が見つかりませんでした。'}
             </p>
             <button
               onClick={() => fetchRandomQuestion()}
-              className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
+              style={{ padding: '10px 20px', backgroundColor: '#2563eb', color: '#ffffff', fontWeight: 'bold', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
             >
               別の問題を読み込む
             </button>
           </div>
         ) : (
           <>
-            {/* 問題表示エリア */}
-            <div className={`bg-white p-6 rounded-xl shadow-sm border-l-4 mb-6 ${isMarkedMistake ? 'border-red-500' : 'border-blue-600'}`}>
-              <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-                <div className="flex items-center space-x-3">
-                  <span className="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded">
+            {/* 問題表示エリア（元のデザインを完全復元） */}
+            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: isMarkedMistake ? '4px solid #ef4444' : '4px solid #2563eb', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '14px', fontWeight: 'bold', padding: '4px 12px', borderRadius: '6px' }}>
                     {question.subject}
                   </span>
-                  <h2 className="font-bold text-lg text-slate-800">
+                  <h2 style={{ fontWeight: 'bold', fontSize: '18px', color: '#1e293b', margin: 0 }}>
                     {question.year ? `(${question.year}) ` : ''}第{question.question_num}問
                   </h2>
-                  <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                  <span style={{ fontSize: '12px', color: '#94a3b8', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px' }}>
                     ID: {question.id}
                   </span>
                 </div>
 
                 <button
                   onClick={() => toggleMistake(question.id)}
-                  className={`px-3 py-1 text-xs font-bold rounded border cursor-pointer ${
-                    isMarkedMistake
-                      ? 'bg-amber-100 text-red-700 border-red-400'
-                      : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
-                  }`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    backgroundColor: isMarkedMistake ? '#fef3c7' : '#f8fafc',
+                    color: isMarkedMistake ? '#b91c1c' : '#475569',
+                    border: isMarkedMistake ? '1px solid #f87171' : '1px solid #cbd5e1',
+                  }}
                 >
                   {isMarkedMistake ? '🔖 復習中' : '☆ 復習に追加'}
                 </button>
               </div>
-              <div className={`whitespace-pre-wrap leading-relaxed text-slate-800 ${getFontSizeClass()}`}>
+              <div className={getFontSizeClass()} style={{ whiteSpace: 'pre-wrap', lineHeight: '1.75', color: '#1e293b' }}>
                 {question.question_text}
               </div>
             </div>
 
-            {/* 解答 or 結果エリア */}
+            {/* 解答 or 結果エリア（元のテンキーデザインを完全復元） */}
             {!isAnswered ? (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
                 <input
                   type="text"
                   readOnly
                   value={userAnswer}
                   placeholder="解答"
-                  className="w-full max-w-xs mx-auto block text-center text-3xl font-bold tracking-widest p-4 border-2 border-blue-600 rounded-lg mb-6 bg-slate-50"
+                  style={{ width: '100%', maxWidth: '320px', margin: '0 auto 24px auto', display: 'block', textAlign: 'center', fontSize: '30px', fontWeight: 'bold', letterSpacing: '0.15em', padding: '14px', border: '2px solid #2563eb', borderRadius: '10px', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box' }}
                 />
                 
-                {/* テンキー */}
-                <div className={`grid gap-3 mb-6 max-w-md mx-auto ${isTwoBtns ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                {/* テンキー（ボタン数は動的） */}
+                <div style={{ display: 'grid', gridTemplateColumns: isTwoBtns ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px', maxWidth: '448px', margin: '0 auto 24px auto' }}>
                   {Array.from({ length: maxButtons }, (_, i) => i + 1).map((n) => (
                     <button
                       key={n}
                       onClick={() => addNum(n)}
-                      className="bg-white border-2 border-blue-600 text-blue-700 font-bold text-2xl p-4 rounded-xl hover:bg-blue-600 hover:text-white transition-colors shadow-sm active:translate-y-1"
+                      style={{ backgroundColor: '#ffffff', border: '2px solid #2563eb', color: '#1d4ed8', fontWeight: 'bold', fontSize: '24px', padding: '16px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                     >
                       {n}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex gap-4 max-w-md mx-auto">
-                  <button onClick={clearNum} className="flex-1 bg-slate-400 text-white font-bold p-4 rounded-xl hover:bg-slate-500">
+                <div style={{ display: 'flex', gap: '16px', maxWidth: '448px', margin: '0 auto' }}>
+                  <button onClick={clearNum} style={{ flex: 1, backgroundColor: '#94a3b8', color: '#ffffff', fontWeight: 'bold', padding: '16px', borderRadius: '12px', border: 'none', fontSize: '16px', cursor: 'pointer' }}>
                     クリア
                   </button>
-                  <button onClick={submitAnswer} className="flex-[2] bg-red-600 text-white font-bold p-4 rounded-xl hover:bg-red-700 shadow-md">
+                  <button onClick={submitAnswer} style={{ flex: 2, backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 'bold', padding: '16px', borderRadius: '12px', border: 'none', fontSize: '16px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                     解答を送信
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200 text-center">
+              <div style={{ backgroundColor: '#ffffff', padding: '32px 24px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
                 {isCorrect ? (
                   <div>
-                    <p className="text-4xl font-bold text-green-600 mb-2">⭕️ 大正解！！</p>
+                    <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#16a34a', margin: '0 0 8px 0' }}>⭕️ 大正解！！</p>
                     {isMarkedMistake && (
                       <button
                         onClick={() => toggleMistake(question.id)}
-                        className="mt-2 px-4 py-1.5 bg-blue-50 text-blue-700 border border-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100"
+                        style={{ marginTop: '8px', padding: '6px 14px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                       >
                         🎉 克服できたので復習リストから外す
                       </button>
@@ -551,46 +571,46 @@ export default function TantouDrillPage() {
                   </div>
                 ) : (
                   <div>
-                    <p className="text-4xl font-bold text-red-600 mb-2">❌ 不正解...</p>
-                    <p className="text-xs font-bold text-red-600 mb-3">🔖 復習リストに自動登録しました（クラウド同期済）</p>
-                    <p className="text-lg text-slate-700">
-                      あなたの解答: <span className="font-bold tracking-widest">{userAnswer}</span><br />
-                      正解は <span className="font-bold tracking-widest text-xl text-red-600">{question.answer.replace(/[^0-9]/g, '')}</span> です
+                    <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#dc2626', margin: '0 0 8px 0' }}>❌ 不正解...</p>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#dc2626', margin: '0 0 12px 0' }}>🔖 復習リストに自動登録しました（クラウド同期済）</p>
+                    <p style={{ fontSize: '18px', color: '#334155', margin: 0 }}>
+                      あなたの解答: <span style={{ fontWeight: 'bold', letterSpacing: '0.1em' }}>{userAnswer}</span><br />
+                      正解は <span style={{ fontWeight: 'bold', letterSpacing: '0.1em', fontSize: '20px', color: '#dc2626' }}>{question.answer.replace(/[^0-9]/g, '')}</span> です
                     </p>
                   </div>
                 )}
 
                 {/* AIへの連携ボタン */}
-                <div className="mt-8 pt-6 border-t border-slate-200">
+                <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
                   <button 
                     onClick={handleSendToAI}
-                    className="w-full max-w-md mx-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 px-6 rounded-xl hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2"
+                    style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: 'linear-gradient(to right, #4f46e5, #9333ea)', color: '#ffffff', fontWeight: 'bold', padding: '16px 24px', borderRadius: '12px', border: 'none', fontSize: '16px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                   >
                     ✨ この問題をAIで「論証カード」にする
                   </button>
-                  <p className="text-xs text-slate-500 mt-2">クリックすると最適なプロンプトがコピーされます</p>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>クリックすると最適なプロンプトがコピーされます</p>
                 </div>
 
-                <button onClick={() => fetchRandomQuestion()} className="mt-6 w-full max-w-md mx-auto bg-green-500 text-white font-bold py-4 rounded-xl hover:bg-green-600 shadow-md">
+                <button onClick={() => fetchRandomQuestion()} style={{ marginTop: '20px', width: '100%', maxWidth: '448px', margin: '20px auto 0 auto', display: 'block', backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold', padding: '16px', borderRadius: '12px', border: 'none', fontSize: '18px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                   次の問題へ
                 </button>
               </div>
             )}
 
-            {/* 解説アコーディオン */}
+            {/* 解説アコーディオン（解答後のみ表示） */}
             {isAnswered && (
-              <div className="mt-6 space-y-3">
+              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {['a', 'b', 'c', 'd', 'e'].map((char, idx) => {
                   const explanation = question[`explanation_${char}`];
                   if (!explanation) return null;
                   const labels = ['ア', 'イ', 'ウ', 'エ', 'オ'];
                   
                   return (
-                    <details key={char} className="bg-white border border-slate-200 rounded-lg shadow-sm">
-                      <summary className="p-4 bg-blue-50 font-bold text-slate-800 cursor-pointer rounded-t-lg hover:bg-blue-100">
+                    <details key={char} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                      <summary style={{ padding: '16px', backgroundColor: '#eff6ff', fontWeight: 'bold', color: '#1e293b', cursor: 'pointer', borderRadius: '8px' }}>
                         {labels[idx]} の解説を見る
                       </summary>
-                      <div className="p-5 whitespace-pre-wrap text-slate-700 border-t border-slate-200 leading-relaxed text-sm">
+                      <div style={{ padding: '20px', whiteSpace: 'pre-wrap', color: '#334155', borderTop: '1px solid #e2e8f0', lineHeight: '1.7', fontSize: '14px' }}>
                         {explanation}
                       </div>
                     </details>
