@@ -170,6 +170,7 @@ function TantoPracticeContent() {
     [syncKey]
   );
 
+  // 最新DAY・進捗をクラウドから強制同期（updated_at が NULL の古いレコードを除外）
   const forceFetchLatestFromCloud = useCallback(
     async (currentKey: string, currentTag: string | null, currentQuestionsLen: number) => {
       setSyncStatus('saving');
@@ -178,7 +179,8 @@ function TantoPracticeContent() {
           .from('user_sync_progress')
           .select('*')
           .eq('sync_key', currentKey)
-          .order('updated_at', { ascending: false })
+          .not('updated_at', 'is', null)
+          .order('updated_at', { ascending: false, nullsFirst: false })
           .limit(1)
           .maybeSingle();
 
@@ -211,7 +213,7 @@ function TantoPracticeContent() {
             setStreak(latestRecord.streak || 0);
           }
         } else if (!currentTag) {
-          setActiveSummaryTag(urlSummaryParam || 'DAY001_CAPACITY');
+          setActiveSummaryTag(urlSummaryParam || 'DAY022_CONTRACT_SALE');
         }
         setSyncStatus('saved');
       } catch (err: unknown) {
@@ -256,7 +258,7 @@ function TantoPracticeContent() {
           .select('*')
           .eq('sync_key', syncKey)
           .eq('summary_tag', activeSummaryTag)
-          .order('updated_at', { ascending: false })
+          .order('updated_at', { ascending: false, nullsFirst: false })
           .limit(1)
           .maybeSingle();
 
@@ -346,7 +348,7 @@ function TantoPracticeContent() {
       .select('*')
       .eq('sync_key', syncKey)
       .eq('summary_tag', nextTag)
-      .order('updated_at', { ascending: false })
+      .order('updated_at', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
 
