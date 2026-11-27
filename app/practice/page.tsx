@@ -29,6 +29,17 @@ const fontSizes: Record<FontSizeLevel, { text: string; lh: string; label: string
   xl: { text: '20px', lh: '1.95', label: '特大' },
 };
 
+const ronshoNavStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  backgroundColor: '#eef2ff',
+  border: '1px solid #c7d2fe',
+  borderRadius: '6px',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  color: '#4338ca',
+  textDecoration: 'none',
+};
+
 const dashboardNavStyle: React.CSSProperties = {
   padding: '4px 10px',
   backgroundColor: '#eff6ff',
@@ -476,6 +487,7 @@ export default function PracticePage() {
               {isTimerRunning ? '一時停止' : '開始'}
             </button>
           </div>
+          <Link href={`/${adminQuery}`} style={ronshoNavStyle}>📖 論証集</Link>
           <Link href={`/dashboard${adminQuery}`} style={dashboardNavStyle}>📊 答案履歴</Link>
           <Link href={`/weakness${adminQuery}`} style={weaknessNavStyle}>🎯 弱点DB</Link>
         </div>
