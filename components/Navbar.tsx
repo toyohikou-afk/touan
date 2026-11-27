@@ -17,14 +17,14 @@ export function Navbar() {
   return (
     <nav className="h-14 bg-slate-900 text-white flex items-center justify-between px-4 sm:px-6 shadow-md border-b border-slate-800 shrink-0 sticky top-0 z-50">
       <div className="flex items-center gap-3">
-        {/* ★ 論証アプリへの直通戻るボタン */}
-        <a
-          href="https://yobi-ronsho-app.vercel.app/"
+        {/* ★ 同一サイト内の論証アプリへ（管理者パラメータも維持） */}
+        <Link
+          href={`/${adminQuery}`}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-lg transition shadow-sm shrink-0"
         >
           <span>←</span>
           <span>📇 論証アプリへ戻る</span>
-        </a>
+        </Link>
 
         <Link href={`/practice${adminQuery}`} className="text-sm font-bold text-slate-200 hover:text-white hidden sm:inline">
           CBT起案シミュレーター
