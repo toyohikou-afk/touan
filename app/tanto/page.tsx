@@ -115,7 +115,6 @@ function TantoPracticeContent() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorDetail, setErrorDetail] = useState<string>('');
 
-  // DB制約に依存しない安全なクラウド保存（select → update / insert）
   const saveSyncProgress = useCallback(
     async (
       targetTag: string,
@@ -171,7 +170,6 @@ function TantoPracticeContent() {
     [syncKey]
   );
 
-  // 最新DAY・進捗をクラウドから強制同期
   const forceFetchLatestFromCloud = useCallback(
     async (currentKey: string, currentTag: string | null, currentQuestionsLen: number) => {
       setSyncStatus('saving');
@@ -286,7 +284,6 @@ function TantoPracticeContent() {
     loadData();
   }, [activeSummaryTag, syncKey]);
 
-  // スマホ復帰・タブ切替時に自動同期
   useEffect(() => {
     const handleWakeUp = () => {
       if (document.visibilityState === 'visible' && !urlSummaryParam) {
@@ -385,16 +382,16 @@ function TantoPracticeContent() {
     await saveSyncProgress(activeSummaryTag, 0, {}, 0, 0, 0);
   };
 
-  const fontStyles = {
-    normal: { question: 'text-base leading-relaxed', point: 'text-xs leading-relaxed', explanation: 'text-xs sm:text-sm leading-relaxed' },
-    large: { question: 'text-lg sm:text-xl leading-relaxed font-medium', point: 'text-sm leading-relaxed', explanation: 'text-sm sm:text-base leading-relaxed' },
-    xlarge: { question: 'text-xl sm:text-2xl leading-relaxed font-medium tracking-wide', point: 'text-base leading-relaxed', explanation: 'text-base sm:text-lg leading-relaxed' },
+  const fontSizes = {
+    normal: { question: '16px', point: '13px', explanation: '14px' },
+    large: { question: '19px', point: '14px', explanation: '15px' },
+    xlarge: { question: '22px', point: '16px', explanation: '17px' },
   }[fontSize];
 
   if (loading || !activeSummaryTag) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-400 font-mono text-sm">
-        前回の学習進捗を同期中...
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617', color: '#94a3b8', fontFamily: 'monospace', fontSize: '14px' }}>
+        最新の学習DAYと進捗を同期中...
       </div>
     );
   }
@@ -402,233 +399,309 @@ function TantoPracticeContent() {
   const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 max-w-lg mx-auto">
-      <header className="border-b border-slate-800 pb-3 pt-1 select-none">
-        <div className="flex justify-between items-center mb-2.5 gap-2">
-          <Link href="/" className="text-xs text-slate-400 hover:text-slate-200 font-semibold bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg shrink-0">
-            ← 論証集
-          </Link>
+    <div style={{ minHeight: '100vh', backgroundColor: '#020617', color: '#f1f5f9', fontFamily: 'sans-serif' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px', maxWidth: '540px', margin: '0 auto', boxSizing: 'border-box' }}>
+        
+        {/* ヘッダー */}
+        <header style={{ borderBottom: '1px solid #1e293b', paddingBottom: '12px', paddingTop: '4px', userSelect: 'none' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px' }}>
+            <Link
+              href="/"
+              style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '6px 10px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}
+            >
+              ← 論証集
+            </Link>
 
-          <a
-            href="https://touan-psi.vercel.app/practice"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white font-bold bg-indigo-950/80 border border-indigo-700/80 hover:bg-indigo-900 px-3 py-1.5 rounded-lg shadow-sm transition"
-          >
-            <span>📝 論文演習へ</span>
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
+            <Link
+              href="/practice"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#a5b4fc', fontWeight: 'bold', backgroundColor: 'rgba(30, 27, 75, 0.85)', border: '1px solid rgba(67, 56, 202, 0.8)', padding: '6px 12px', borderRadius: '8px', textDecoration: 'none' }}
+            >
+              <span>📝 論文演習へ</span>
+            </Link>
 
-          <div className="flex items-center gap-1 text-[11px] shrink-0">
-            {syncStatus === 'saving' && (
-              <span className="text-amber-400 animate-pulse font-mono">同期中...</span>
-            )}
-            {syncStatus === 'error' && (
-              <span title={errorDetail} className="text-rose-400 font-mono font-bold">
-                ⚠失敗
-              </span>
-            )}
-            {(syncStatus === 'saved' || syncStatus === 'idle') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', flexShrink: 0 }}>
+              {syncStatus === 'saving' && (
+                <span style={{ color: '#fbbf24', fontFamily: 'monospace' }}>同期中...</span>
+              )}
+              {syncStatus === 'error' && (
+                <span title={errorDetail} style={{ color: '#fb7185', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                  ⚠失敗
+                </span>
+              )}
+              {(syncStatus === 'saved' || syncStatus === 'idle') && (
+                <button
+                  onClick={() => forceFetchLatestFromCloud(syncKey, activeSummaryTag, questions.length)}
+                  title="タップしてクラウドの最新DAY・進捗を手動読込"
+                  style={{ color: '#34d399', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(6, 78, 59, 0.5)', border: '1px solid #047857', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34d399', display: 'inline-block' }}></span>
+                  同期
+                </button>
+              )}
               <button
-                onClick={() => forceFetchLatestFromCloud(syncKey, activeSummaryTag, questions.length)}
-                title="タップしてクラウドの最新DAY・進捗を手動読込"
-                className="text-emerald-400 active:scale-95 font-mono flex items-center gap-1 bg-emerald-950/60 border border-emerald-700 px-2 py-1 rounded"
+                onClick={() => setIsEditingKey(!isEditingKey)}
+                style={{ color: '#94a3b8', textDecoration: 'underline', fontFamily: 'monospace', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>同期
+                [{syncKey}]
               </button>
-            )}
-            <button onClick={() => setIsEditingKey(!isEditingKey)} className="text-slate-400 hover:text-slate-200 underline font-mono ml-0.5">
-              [{syncKey}]
-            </button>
-          </div>
-        </div>
-
-        {syncStatus === 'error' && errorDetail && (
-          <div className="mb-2 rounded bg-rose-950/80 border border-rose-700 px-2.5 py-1.5 text-[11px] text-rose-200">
-            同期エラー: {errorDetail}
-          </div>
-        )}
-
-        <div className="mb-2.5 grid grid-cols-3 gap-2">
-          <div className="col-span-1">
-            <label className="text-[10px] text-slate-400 font-bold block mb-1">【科目】</label>
-            <select
-              value={currentSubject}
-              onChange={handleSubjectChange}
-              className="w-full bg-slate-900 border border-indigo-600/60 text-indigo-200 text-xs font-semibold py-2 px-2 rounded-xl outline-none focus:border-indigo-400"
-            >
-              {SUBJECT_LIST.map((sub) => (
-                <option key={sub} value={sub} className="bg-slate-900 text-slate-200">
-                  {sub}
-                </option>
-              ))}
-            </select>
+            </div>
           </div>
 
-          <div className="col-span-2">
-            <label className="text-[10px] text-slate-400 font-bold block mb-1">【学習日程表 SUMMARY 選択】</label>
-            <select
-              value={activeSummaryTag}
-              onChange={handleSummaryChange}
-              className="w-full bg-slate-900 border border-indigo-600/60 text-indigo-200 text-xs font-semibold py-2 px-2 rounded-xl outline-none focus:border-indigo-400"
-            >
-              {currentSubjectOptions.map((opt) => (
-                <option key={opt.tag} value={opt.tag} className="bg-slate-900 text-slate-200">
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          {syncStatus === 'error' && errorDetail && (
+            <div style={{ marginBottom: '8px', borderRadius: '6px', backgroundColor: 'rgba(76, 5, 25, 0.8)', border: '1px solid #be123c', padding: '6px 10px', fontSize: '11px', color: '#fecdd3' }}>
+              同期エラー: {errorDetail}
+            </div>
+          )}
 
-        {isEditingKey && (
-          <div className="flex items-center gap-1 mb-2.5 bg-slate-900 border border-slate-700 p-2 rounded-lg text-xs">
-            <span className="text-slate-300 font-semibold">同期ID:</span>
-            <input
-              type="text"
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              className="bg-slate-800 border border-slate-600 px-2 py-1 rounded text-white flex-1 font-mono text-xs"
-            />
+          {/* 科目＆日程ドロップダウン */}
+          <div style={{ marginBottom: '10px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
+            <div>
+              <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>【科目】</label>
+              <select
+                value={currentSubject}
+                onChange={handleSubjectChange}
+                style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid rgba(79, 70, 229, 0.6)', color: '#c7d2fe', fontSize: '12px', fontWeight: 'bold', padding: '8px', borderRadius: '10px', outline: 'none', boxSizing: 'border-box' }}
+              >
+                {SUBJECT_LIST.map((sub) => (
+                  <option key={sub} value={sub} style={{ backgroundColor: '#0f172a', color: '#e2e8f0' }}>
+                    {sub}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>【学習日程表 SUMMARY 選択】</label>
+              <select
+                value={activeSummaryTag}
+                onChange={handleSummaryChange}
+                style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid rgba(79, 70, 229, 0.6)', color: '#c7d2fe', fontSize: '12px', fontWeight: 'bold', padding: '8px', borderRadius: '10px', outline: 'none', boxSizing: 'border-box' }}
+              >
+                {currentSubjectOptions.map((opt) => (
+                  <option key={opt.tag} value={opt.tag} style={{ backgroundColor: '#0f172a', color: '#e2e8f0' }}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {isEditingKey && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', backgroundColor: '#0f172a', border: '1px solid #334155', padding: '8px', borderRadius: '8px', fontSize: '12px' }}>
+              <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>同期ID:</span>
+              <input
+                type="text"
+                value={tempKey}
+                onChange={(e) => setTempKey(e.target.value)}
+                style={{ backgroundColor: '#1e293b', border: '1px solid #475569', padding: '4px 8px', borderRadius: '4px', color: '#ffffff', flex: 1, fontFamily: 'monospace', fontSize: '12px' }}
+              />
+              <button
+                onClick={() => {
+                  if (tempKey.trim()) {
+                    setSyncKey(tempKey.trim());
+                    localStorage.setItem('yobi_tanto_synckey', tempKey.trim());
+                    setIsEditingKey(false);
+                  }
+                }}
+                style={{ backgroundColor: '#4f46e5', color: '#ffffff', fontWeight: 'bold', padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+              >
+                設定
+              </button>
+            </div>
+          )}
+
+          {/* 前へ・問題番号・次へ */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <button
-              onClick={() => {
-                if (tempKey.trim()) {
-                  setSyncKey(tempKey.trim());
-                  localStorage.setItem('yobi_tanto_synckey', tempKey.trim());
-                  setIsEditingKey(false);
-                }
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                border: currentIndex === 0 ? '1px solid #1e293b' : '1px solid #475569',
+                backgroundColor: currentIndex === 0 ? 'rgba(15, 23, 42, 0.3)' : '#1e293b',
+                color: currentIndex === 0 ? '#475569' : '#e2e8f0',
+                cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
               }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1 rounded"
             >
-              設定
+              ◀ 前へ
+            </button>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#e2e8f0' }}>
+              問 {questions.length > 0 ? currentIndex + 1 : 0} / {questions.length}
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={currentIndex === questions.length - 1}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                border: currentIndex === questions.length - 1 ? '1px solid #1e293b' : '1px solid #4f46e5',
+                backgroundColor: currentIndex === questions.length - 1 ? 'rgba(15, 23, 42, 0.3)' : 'rgba(49, 46, 129, 0.5)',
+                color: currentIndex === questions.length - 1 ? '#475569' : '#c7d2fe',
+                cursor: currentIndex === questions.length - 1 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              次へ ▶
             </button>
           </div>
-        )}
 
-        <div className="flex justify-between items-center mb-2">
+          {/* 文字サイズ＆定着率 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '4px', borderRadius: '8px' }}>
+              <span style={{ fontSize: '10px', color: '#94a3b8', padding: '0 4px', fontWeight: 'bold' }}>文字</span>
+              {(['normal', 'large', 'xlarge'] as FontSize[]).map((sz) => (
+                <button
+                  key={sz}
+                  onClick={() => setFontSize(sz)}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: fontSize === sz ? '#4f46e5' : 'transparent',
+                    color: fontSize === sz ? '#ffffff' : '#94a3b8',
+                    fontWeight: fontSize === sz ? 'bold' : 'normal',
+                  }}
+                >
+                  {sz === 'normal' ? '標準' : sz === 'large' ? '大' : '特大'}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 'bold', color: accuracy >= 80 ? '#34d399' : '#fbbf24' }}>定着率: {accuracy}%</span>
+              <button onClick={handleResetSession} style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>最初から</button>
+            </div>
+          </div>
+        </header>
+
+        {/* 問題文・○✕ボタン・解説カード */}
+        <main style={{ margin: 'auto 0', padding: '12px 0' }}>
+          {questions.length === 0 ? (
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '24px', textAlign: 'center', color: '#cbd5e1' }}>
+              <p style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>このSUMMARYの問題は現在準備中です</p>
+              <p style={{ fontSize: '12px', color: '#64748b' }}>SQLを実行して問題データを投入してください。</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#1e1b4b', color: '#a5b4fc', border: '1px solid rgba(55, 48, 163, 0.6)' }}>
+                    {currentQ.topic}
+                  </span>
+                  {streak >= 3 && <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold' }}>🔥 {streak} 連続正解</span>}
+                </div>
+                <p style={{ fontSize: fontSizes.question, lineHeight: '1.7', color: '#f1f5f9', margin: 0, whiteSpace: 'pre-wrap' }}>
+                  {currentQ.question_text}
+                </p>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                {!isAnswered ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', userSelect: 'none' }}>
+                    <button
+                      onClick={() => handleSelect(true)}
+                      style={{ height: '84px', backgroundColor: 'rgba(6, 78, 59, 0.45)', border: '2px solid rgba(16, 185, 129, 0.6)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+                    >
+                      <span style={{ fontSize: '32px', fontWeight: '900', color: '#34d399', lineHeight: '1' }}>○</span>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#6ee7b7', marginTop: '4px' }}>正しい</span>
+                    </button>
+                    <button
+                      onClick={() => handleSelect(false)}
+                      style={{ height: '84px', backgroundColor: 'rgba(136, 19, 55, 0.45)', border: '2px solid rgba(244, 63, 94, 0.6)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+                    >
+                      <span style={{ fontSize: '32px', fontWeight: '900', color: '#fb7185', lineHeight: '1' }}>✕</span>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fda4af', marginTop: '4px' }}>誤り</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div
+                      style={{
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: selectedAnswer === currentQ.correct_answer ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(244, 63, 94, 0.6)',
+                        backgroundColor: selectedAnswer === currentQ.correct_answer ? 'rgba(6, 78, 59, 0.35)' : 'rgba(136, 19, 55, 0.35)',
+                        color: selectedAnswer === currentQ.correct_answer ? '#6ee7b7' : '#fda4af',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', marginBottom: '6px' }}>
+                        <span>{selectedAnswer === currentQ.correct_answer ? '正解 (○)' : '不正解 (✕)'}</span>
+                        <span style={{ fontSize: '12px', backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '4px 10px', borderRadius: '6px', border: '1px solid #334155', color: '#e2e8f0' }}>
+                          正解肢: {currentQ.correct_answer ? '○ 正しい' : '✕ 誤り'}
+                        </span>
+                      </div>
+                      {currentQ.point_rule && (
+                        <div style={{ marginTop: '10px', padding: '12px', backgroundColor: 'rgba(15, 23, 42, 0.95)', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#fde68a' }}>
+                          <span style={{ fontWeight: 'bold', display: 'block', color: '#fbbf24', marginBottom: '4px', fontSize: '12px' }}>【判例規範・当てはめ基準】</span>
+                          <p style={{ fontSize: fontSizes.point, lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>{currentQ.point_rule}</p>
+                        </div>
+                      )}
+                      <p style={{ marginTop: '10px', marginBottom: 0, color: '#e2e8f0', fontSize: fontSizes.explanation, lineHeight: '1.65', whiteSpace: 'pre-wrap' }}>
+                        {currentQ.explanation}
+                      </p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px', userSelect: 'none' }}>
+                      <button
+                        onClick={handlePrev}
+                        disabled={currentIndex === 0}
+                        style={{
+                          height: '48px',
+                          borderRadius: '12px',
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          border: currentIndex === 0 ? '1px solid #1e293b' : '1px solid #334155',
+                          backgroundColor: currentIndex === 0 ? 'rgba(15, 23, 42, 0.4)' : '#1e293b',
+                          color: currentIndex === 0 ? '#475569' : '#f1f5f9',
+                          cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        ◀ 前の肢に戻る
+                      </button>
+                      <button
+                        onClick={handleNext}
+                        style={{ height: '48px', backgroundColor: '#4f46e5', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', color: '#ffffff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)' }}
+                      >
+                        {currentIndex < questions.length - 1 ? '次の肢へ進む ▶' : '演習結果を確認'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </main>
+
+        {/* フッター */}
+        <footer style={{ paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#64748b', borderTop: '1px solid #0f172a', userSelect: 'none' }}>
           <button
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
-              currentIndex === 0 ? 'border-slate-800 text-slate-600 bg-slate-900/30' : 'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700'
-            }`}
+            style={{ padding: '4px 10px', borderRadius: '4px', color: currentIndex === 0 ? '#1e293b' : '#94a3b8', textDecoration: currentIndex === 0 ? 'none' : 'underline', background: 'none', border: 'none', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer' }}
           >
-            ◀ 前へ
+            ◀ 前の問へ
           </button>
-          <span className="font-bold text-sm text-slate-200">
-            問 {questions.length > 0 ? currentIndex + 1 : 0} / {questions.length}
-          </span>
+          <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{activeSummaryTag}</span>
           <button
             onClick={handleNext}
-            disabled={currentIndex === questions.length - 1}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
-              currentIndex === questions.length - 1 ? 'border-slate-800 text-slate-600 bg-slate-900/30' : 'border-indigo-600 bg-indigo-900/50 text-indigo-200 hover:bg-indigo-800/60'
-            }`}
+            disabled={questions.length === 0 || currentIndex === questions.length - 1}
+            style={{ padding: '4px 10px', borderRadius: '4px', color: questions.length === 0 || currentIndex === questions.length - 1 ? '#1e293b' : '#94a3b8', textDecoration: questions.length === 0 || currentIndex === questions.length - 1 ? 'none' : 'underline', background: 'none', border: 'none', cursor: questions.length === 0 || currentIndex === questions.length - 1 ? 'not-allowed' : 'pointer' }}
           >
-            次へ ▶
+            スキップ ▶
           </button>
-        </div>
-
-        <div className="flex justify-between items-center text-xs">
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-lg">
-            <span className="text-[10px] text-slate-400 px-1 font-semibold">文字</span>
-            {(['normal', 'large', 'xlarge'] as FontSize[]).map((sz) => (
-              <button
-                key={sz}
-                onClick={() => setFontSize(sz)}
-                className={`px-2 py-0.5 rounded text-xs ${fontSize === sz ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400'}`}
-              >
-                {sz === 'normal' ? '標準' : sz === 'large' ? '大' : '特大'}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`font-bold ${accuracy >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>定着率: {accuracy}%</span>
-            <button onClick={handleResetSession} className="text-[11px] text-slate-400 hover:text-rose-400 underline">最初から</button>
-          </div>
-        </div>
-      </header>
-
-      <main className="my-auto py-3 select-text">
-        {questions.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-slate-300">
-            <p className="font-bold text-base mb-1">このSUMMARYの問題は現在準備中です</p>
-            <p className="text-xs text-slate-500">SQLを実行して問題データを投入してください。</p>
-          </div>
-        ) : (
-          <>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl relative">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/50">
-                  {currentQ.topic}
-                </span>
-                {streak >= 3 && <span className="text-xs text-amber-400 font-bold animate-pulse">🔥 {streak} 連続正解</span>}
-              </div>
-              <p className={`${fontStyles.question} text-slate-100 select-text`}>{currentQ.question_text}</p>
-            </div>
-
-            <div className="mt-4">
-              {!isAnswered ? (
-                <div className="grid grid-cols-2 gap-3.5 select-none">
-                  <button onClick={() => handleSelect(true)} className="h-20 bg-emerald-950/40 hover:bg-emerald-900/60 active:scale-95 border-2 border-emerald-500/50 rounded-2xl flex flex-col items-center justify-center transition shadow-lg">
-                    <span className="text-3xl font-black text-emerald-400">○</span>
-                    <span className="text-xs font-semibold text-emerald-300 mt-0.5">正しい</span>
-                  </button>
-                  <button onClick={() => handleSelect(false)} className="h-20 bg-rose-950/40 hover:bg-rose-900/60 active:scale-95 border-2 border-rose-500/50 rounded-2xl flex flex-col items-center justify-center transition shadow-lg">
-                    <span className="text-3xl font-black text-rose-400">✕</span>
-                    <span className="text-xs font-semibold text-rose-300 mt-0.5">誤り</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3 animate-in fade-in duration-150">
-                  <div className={`p-4 rounded-xl border select-text ${selectedAnswer === currentQ.correct_answer ? 'bg-emerald-950/30 border-emerald-500/60 text-emerald-300' : 'bg-rose-950/30 border-rose-500/60 text-rose-300'}`}>
-                    <div className="flex items-center justify-between font-bold text-lg mb-1">
-                      <span>{selectedAnswer === currentQ.correct_answer ? '正解 (○)' : '不正解 (✕)'}</span>
-                      <span className="text-xs bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700 text-slate-200">
-                        正解肢: {currentQ.correct_answer ? '○ 正しい' : '✕ 誤り'}
-                      </span>
-                    </div>
-                    {currentQ.point_rule && (
-                      <div className="mt-2.5 p-3 bg-slate-900/95 rounded-lg border border-amber-500/30 text-amber-200/95 select-text">
-                        <span className="font-semibold block text-amber-400 mb-1 text-xs">【判例規範・当てはめ基準】</span>
-                        <p className={`${fontStyles.point} select-text`}>{currentQ.point_rule}</p>
-                      </div>
-                    )}
-                    <p className={`mt-2.5 text-slate-200 select-text ${fontStyles.explanation}`}>{currentQ.explanation}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mt-1 select-none">
-                    <button onClick={handlePrev} disabled={currentIndex === 0} className={`h-12 rounded-xl font-bold border transition ${currentIndex === 0 ? 'border-slate-800 text-slate-600 bg-slate-900/40' : 'border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-slate-100'}`}>
-                      ◀ 前の肢に戻る
-                    </button>
-                    <button onClick={handleNext} className="h-12 bg-indigo-600 hover:bg-indigo-500 active:scale-98 rounded-xl font-bold text-white shadow-lg">
-                      {currentIndex < questions.length - 1 ? '次の肢へ進む ▶' : '演習結果を確認'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </main>
-
-      <footer className="pt-2 flex justify-between items-center text-xs text-slate-500 border-t border-slate-900 select-none">
-        <button onClick={handlePrev} disabled={currentIndex === 0} className={`py-1 px-2.5 rounded ${currentIndex === 0 ? 'text-slate-800' : 'text-slate-400 hover:text-slate-200 underline'}`}>
-          ◀ 前の問へ
-        </button>
-        <span className="font-mono text-[11px] text-slate-500">{activeSummaryTag}</span>
-        <button onClick={handleNext} disabled={questions.length === 0 || currentIndex === questions.length - 1} className={`py-1 px-2.5 rounded ${questions.length === 0 || currentIndex === questions.length - 1 ? 'text-slate-800' : 'text-slate-400 hover:text-slate-200 underline'}`}>
-          スキップ ▶
-        </button>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }
 
 export default function TantoPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-slate-400 p-4">進捗を同期中...</div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', backgroundColor: '#020617', color: '#94a3b8', padding: '16px' }}>進捗を同期中...</div>}>
       <TantoPracticeContent />
     </Suspense>
   );
