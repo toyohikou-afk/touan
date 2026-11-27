@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// RLSをバイパスできるサーバー専用のSupabaseクライアント
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// リクエスト実行時にクライアントを生成する関数（ビルド時エラー防止）
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error('サーバー側（Vercel）に NEXT_PUBLIC_SUPABASE_URL または SUPABASE_SERVICE_ROLE_KEY が設定されていません');
+  }
+  return createClient(url, serviceKey);
+}
 
 // 認証チェック共通関数
 function checkAuth(req: Request) {
@@ -27,6 +31,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: '問題IDが必要です' }, { status: 400 });
     }
 
+    const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin
       .from('tantou_questions')
       .update({
@@ -64,6 +69,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: '問題IDが必要です' }, { status: 400 });
     }
 
+    const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin
       .from('tantou_questions')
       .delete()
